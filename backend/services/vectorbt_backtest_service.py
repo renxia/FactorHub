@@ -115,7 +115,13 @@ class VectorBTBacktestService:
         if 'Volatility (Ann.) [%]' in stats:
             volatility = stats.get('Volatility (Ann.) [%]', 0) / 100.0
         else:
-            volatility = returns_clean.std() * np.sqrt(252) if len(returns_clean) > 0 else 0.0
+            # 对于多资产情况，计算组合收益率的波动率
+            if isinstance(returns_clean, pd.DataFrame):
+                # 取平均组合收益
+                portfolio_returns = returns_clean.mean(axis=1)
+                volatility = portfolio_returns.std() * np.sqrt(252) if len(portfolio_returns) > 0 else 0.0
+            else:
+                volatility = returns_clean.std() * np.sqrt(252) if len(returns_clean) > 0 else 0.0
 
         sharpe_ratio = stats.get('Sharpe Ratio', 0)
         sortino_ratio = stats.get('Sortino Ratio', 0)
@@ -125,8 +131,14 @@ class VectorBTBacktestService:
 
         # VaR 和 CVaR 需要自己计算
         if len(returns_clean) > 0:
-            var_95 = returns_clean.quantile(0.05)
-            cvar_95 = returns_clean[returns_clean <= var_95].mean()
+            if isinstance(returns_clean, pd.DataFrame):
+                # 对于多资产，计算组合级别的 VaR/CVaR
+                portfolio_returns = returns_clean.mean(axis=1)
+                var_95 = portfolio_returns.quantile(0.05)
+                cvar_95 = portfolio_returns[portfolio_returns <= var_95].mean()
+            else:
+                var_95 = returns_clean.quantile(0.05)
+                cvar_95 = returns_clean[returns_clean <= var_95].mean()
         else:
             var_95 = 0.0
             cvar_95 = 0.0
@@ -340,7 +352,13 @@ class VectorBTBacktestService:
         if 'Volatility (Ann.) [%]' in stats:
             volatility = stats.get('Volatility (Ann.) [%]', 0) / 100.0
         else:
-            volatility = returns_clean.std() * np.sqrt(252) if len(returns_clean) > 0 else 0.0
+            # 对于多资产情况，计算组合收益率的波动率
+            if isinstance(returns_clean, pd.DataFrame):
+                # 取平均组合收益
+                portfolio_returns = returns_clean.mean(axis=1)
+                volatility = portfolio_returns.std() * np.sqrt(252) if len(portfolio_returns) > 0 else 0.0
+            else:
+                volatility = returns_clean.std() * np.sqrt(252) if len(returns_clean) > 0 else 0.0
 
         sharpe_ratio = stats.get('Sharpe Ratio', 0)
         sortino_ratio = stats.get('Sortino Ratio', 0)
@@ -350,8 +368,14 @@ class VectorBTBacktestService:
 
         # VaR 和 CVaR 需要自己计算
         if len(returns_clean) > 0:
-            var_95 = returns_clean.quantile(0.05)
-            cvar_95 = returns_clean[returns_clean <= var_95].mean()
+            if isinstance(returns_clean, pd.DataFrame):
+                # 对于多资产，计算组合级别的 VaR/CVaR
+                portfolio_returns = returns_clean.mean(axis=1)
+                var_95 = portfolio_returns.quantile(0.05)
+                cvar_95 = portfolio_returns[portfolio_returns <= var_95].mean()
+            else:
+                var_95 = returns_clean.quantile(0.05)
+                cvar_95 = returns_clean[returns_clean <= var_95].mean()
         else:
             var_95 = 0.0
             cvar_95 = 0.0

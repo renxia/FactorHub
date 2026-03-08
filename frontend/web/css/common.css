@@ -497,6 +497,37 @@ table td .whitespace-nowrap {
     position: relative;
 }
 
+/* ========== 因子详情页样式 ========== */
+
+/* 左侧因子列表项 */
+.factor-item {
+    transition: all 0.2s ease-in-out;
+}
+
+.factor-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+/* 自定义滚动条样式 */
+#factor-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#factor-list::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+#factor-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+#factor-list::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
 /* ========== 弹窗样式 ========== */
 .modal-backdrop {
     background-color: rgba(0, 0, 0, 0.5);

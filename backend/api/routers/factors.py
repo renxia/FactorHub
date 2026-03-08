@@ -277,14 +277,22 @@ async def validate_factor(request: dict):
                 "message": "代码不能为空"
             }
 
-        # 简单验证：检查是否包含非法字符
-        # 这里可以添加更复杂的验证逻辑
+        # 字符检查：确保只包含合法字符
         import re
-        # 允许的字符：字母、数字、下划线、运算符、括号、空格
-        if not re.match(r'^[a-zA-Z0-9_\+\-\*\/\(\)\.\s,]+$', code):
+        # 允许：字母、数字、下划线、运算符、比较符、括号、空格等
+        if not re.match(r'^[a-zA-Z0-9_\+\-\*\/\(\)\.\s,\[\]:<>=!&|]+$', code):
             return {
                 "success": False,
                 "message": "代码包含非法字符"
+            }
+
+        # 调用真正的验证逻辑：执行代码来测试
+        is_valid, message = factor_service.validate_factor_code(code)
+
+        if not is_valid:
+            return {
+                "success": False,
+                "message": message
             }
 
         return {
@@ -293,7 +301,8 @@ async def validate_factor(request: dict):
                 "code": code,
                 "formula_type": formula_type,
                 "valid": True
-            }
+            },
+            "message": "验证通过"
         }
     except Exception as e:
         return {

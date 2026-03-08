@@ -67,7 +67,6 @@
                 <nav class="hidden md:flex gap-6">
                     <a href="index.html" class="text-white hover:text-primary-100 font-medium">首页</a>
                     <a href="factor-management.html" class="text-white border-b-2 border-white font-medium">因子管理</a>
-                    <a href="factor-analysis.html" class="text-white hover:text-primary-100 font-medium">因子分析</a>
                     <a href="factor-mining.html" class="text-white hover:text-primary-100 font-medium">因子挖掘</a>
                     <a href="portfolio-analysis.html" class="text-white hover:text-primary-100 font-medium">组合分析</a>
                     <a href="backtesting.html" class="text-white hover:text-primary-100 font-medium">策略回测</a>
@@ -439,7 +438,7 @@
 
             // 渲染表格数据
             tbody.innerHTML = pageFactors.map(factor => `
-                <tr class="table-row-hover">
+                <tr class="table-row-hover cursor-pointer" onclick="viewFactor('${factor.name}')">
                     <td class="py-3 px-4">
                         <div class="font-medium text-slate-800">${factor.name}</div>
                         <div class="text-xs text-slate-500 font-mono mt-1">${factor.code}</div>
@@ -459,11 +458,11 @@
                     </td>
                     <td class="py-3 px-4">
                         <div class="flex gap-2 whitespace-nowrap">
-                            <button onclick="viewFactor('${factor.name}')" class="btn btn-secondary text-sm py-1 px-3 cursor-pointer transition-all duration-200">
+                            <button onclick="event.stopPropagation(); viewFactor('${factor.name}')" class="btn btn-secondary text-sm py-1 px-3 cursor-pointer transition-all duration-200">
                                 查看
                             </button>
                             ${factor.source === 'user' ? `
-                                <button onclick="deleteFactor('${factor.name}')" class="btn btn-danger text-sm py-1 px-3 cursor-pointer transition-all duration-200">
+                                <button onclick="event.stopPropagation(); deleteFactor('${factor.name}')" class="btn btn-danger text-sm py-1 px-3 cursor-pointer transition-all duration-200">
                                     删除
                                 </button>
                             ` : ''}
@@ -606,7 +605,8 @@
             const factor = allFactors.find(f => f.name === name);
             if (!factor) return;
 
-            alert(`因子名称：${factor.name}\n公式：${factor.code}\n分类：${factor.category || '-'}\n说明：${factor.description || '-'}`);
+            // 跳转到因子详情页面
+            window.location.href = `factor-detail.html?factor=${encodeURIComponent(name)}`;
         }
 
         // 创建因子

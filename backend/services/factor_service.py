@@ -24,8 +24,10 @@ class FactorCalculator:
     """因子计算器 - 执行因子计算逻辑"""
 
     def __init__(self):
+        # TALib 函数
         self.talib_funcs = {
             "SMA": talib.SMA,
+            "MA": talib.SMA,  # MA 作为 SMA 的别名
             "EMA": talib.EMA,
             "RSI": talib.RSI,
             "MACD": talib.MACD,
@@ -34,6 +36,177 @@ class FactorCalculator:
             "ATR": talib.ATR,
             "BBANDS": talib.BBANDS,
             "OBV": talib.OBV,
+            "STOCH": talib.STOCH,
+            "STOCHRSI": talib.STOCHRSI,
+            "WILLR": talib.WILLR,
+            "KAMA": talib.KAMA,
+            "ROC": talib.ROC,
+            "MOM": talib.MOM,
+        }
+
+        # 麦语言（MyLanguage）函数
+        self.mylanguage_funcs = self._create_mylanguage_funcs()
+
+    def _create_mylanguage_funcs(self):
+        """创建麦语言兼容函数"""
+
+        def REF(series, n=1):
+            """引用n日前的值"""
+            if isinstance(series, pd.Series):
+                return series.shift(n)
+            return pd.Series(series).shift(n)
+
+        def HHV(series, n=5):
+            """n日内最高值"""
+            if isinstance(series, pd.Series):
+                return series.rolling(window=n, min_periods=1).max()
+            return pd.Series(series).rolling(window=n, min_periods=1).max()
+
+        def LLV(series, n=5):
+            """n日内最低值"""
+            if isinstance(series, pd.Series):
+                return series.rolling(window=n, min_periods=1).min()
+            return pd.Series(series).rolling(window=n, min_periods=1).min()
+
+        def SUM(series, n=5):
+            """n日总和"""
+            if isinstance(series, pd.Series):
+                return series.rolling(window=n, min_periods=1).sum()
+            return pd.Series(series).rolling(window=n, min_periods=1).sum()
+
+        def AVE(series, n=5):
+            """n日平均值"""
+            if isinstance(series, pd.Series):
+                return series.rolling(window=n, min_periods=1).mean()
+            return pd.Series(series).rolling(window=n, min_periods=1).mean()
+
+        def STD(series, n=5):
+            """n日标准差"""
+            if isinstance(series, pd.Series):
+                return series.rolling(window=n, min_periods=1).std()
+            return pd.Series(series).rolling(window=n, min_periods=1).std()
+
+        def COUNT(condition, n=5):
+            """n日内满足条件的次数"""
+            if isinstance(condition, pd.Series):
+                return condition.rolling(window=n, min_periods=1).sum()
+            return pd.Series(condition).rolling(window=n, min_periods=1).sum()
+
+        def EVERY(condition, n=5):
+            """n日内是否一直满足条件"""
+            if isinstance(condition, pd.Series):
+                return condition.rolling(window=n, min_periods=1).apply(lambda x: x.all(), raw=False)
+            return pd.Series(condition).rolling(window=n, min_periods=1).apply(lambda x: x.all())
+
+        def EXIST(condition, n=5):
+            """n日内是否存在满足条件"""
+            if isinstance(condition, pd.Series):
+                return condition.rolling(window=n, min_periods=1).apply(lambda x: x.any(), raw=False)
+            return pd.Series(condition).rolling(window=n, min_periods=1).apply(lambda x: x.any())
+
+        def CROSS(x, y):
+            """金叉：x上穿y"""
+            if isinstance(x, pd.Series) and isinstance(y, pd.Series):
+                return (x > y) & (x.shift(1) <= y.shift(1))
+            return pd.Series(x > y) & pd.Series(x).shift(1) <= pd.Series(y).shift(1)
+
+        def LONGCROSS(x, y, n=5):
+            """n日内金叉"""
+            if isinstance(x, pd.Series) and isinstance(y, pd.Series):
+                cross = (x > y) & (x.shift(1) <= y.shift(1))
+                return cross.rolling(window=n, min_periods=1).apply(lambda z: z.any(), raw=False)
+            x_series = pd.Series(x)
+            y_series = pd.Series(y)
+            cross = (x_series > y_series) & (x_series.shift(1) <= y_series.shift(1))
+            return cross.rolling(window=n, min_periods=1).apply(lambda z: z.any())
+
+        def UP(series, n=1):
+            """上涨：今日大于n日前"""
+            if isinstance(series, pd.Series):
+                return series > series.shift(n)
+            return pd.Series(series) > pd.Series(series).shift(n)
+
+        def DOWN(series, n=1):
+            """下跌：今日小于n日前"""
+            if isinstance(series, pd.Series):
+                return series < series.shift(n)
+            return pd.Series(series) < pd.Series(series).shift(n)
+
+        def IF(condition, true_value, false_value=0):
+            """条件选择函数"""
+            if isinstance(condition, pd.Series):
+                result = pd.Series(np.where(condition, true_value, false_value), index=condition.index)
+                return result
+            return np.where(condition, true_value, false_value)
+
+        def BETWEEN(series, lower, upper):
+            """区间判断"""
+            if isinstance(series, pd.Series):
+                return (series >= lower) & (series <= upper)
+            return (pd.Series(series) >= lower) & (pd.Series(series) <= upper)
+
+        def MAX(series1, series2):
+            """最大值"""
+            if isinstance(series1, pd.Series) and isinstance(series2, pd.Series):
+                return series1.combine(series2, max)
+            return np.maximum(series1, series2)
+
+        def MIN(series1, series2):
+            """最小值"""
+            if isinstance(series1, pd.Series) and isinstance(series2, pd.Series):
+                return series1.combine(series2, min)
+            return np.minimum(series1, series2)
+
+        def BARSLAST(condition):
+            """上一次满足条件到当前的周期数"""
+            if not isinstance(condition, pd.Series):
+                condition = pd.Series(condition)
+
+            result = pd.Series(0, index=condition.index)
+            last_true_idx = -1
+
+            for i in range(len(condition)):
+                if condition.iloc[i]:
+                    last_true_idx = i
+                    result.iloc[i] = 0
+                elif last_true_idx >= 0:
+                    result.iloc[i] = i - last_true_idx
+                else:
+                    result.iloc[i] = len(condition)
+
+            return result
+
+        def CONST(value, length=100):
+            """常量序列"""
+            return pd.Series([value] * length)
+
+        return {
+            # 引用函数
+            "REF": REF,
+            # 极值函数
+            "HHV": HHV,
+            "LLV": LLV,
+            # 统计函数
+            "SUM": SUM,
+            "AVE": AVE,
+            "STD": STD,
+            "COUNT": COUNT,
+            # 逻辑函数
+            "EVERY": EVERY,
+            "EXIST": EXIST,
+            "CROSS": CROSS,
+            "LONGCROSS": LONGCROSS,
+            "UP": UP,
+            "DOWN": DOWN,
+            # 条件函数
+            "IF": IF,
+            "BETWEEN": BETWEEN,
+            # 数学函数
+            "MAX": MAX,
+            "MIN": MIN,
+            # 其他函数
+            "BARSLAST": BARSLAST,
+            "CONST": CONST,
         }
 
     def calculate(self, df: pd.DataFrame, factor_code: str) -> pd.Series:
@@ -67,6 +240,7 @@ class FactorCalculator:
                 "pd": pd,
                 "np": np,
                 **self.talib_funcs,
+                **self.mylanguage_funcs,
             }
 
             local_vars = {}
@@ -111,8 +285,20 @@ class FactorCalculator:
                 "low": df["low"],
                 "close": df["close"],
                 "volume": df["volume"],
+                # 麦语言价格别名（大写）
+                "C": df["close"],  # CLOSE
+                "O": df["open"],   # OPEN
+                "H": df["high"],   # HIGH
+                "L": df["low"],    # LOW
+                "V": df["volume"], # VOLUME
+                "CLOSE": df["close"],
+                "OPEN": df["open"],
+                "HIGH": df["high"],
+                "LOW": df["low"],
+                "VOL": df["volume"],
                 "np": np,
                 **self.talib_funcs,
+                **self.mylanguage_funcs,
             }
 
             try:
@@ -127,9 +313,18 @@ class FactorCalculator:
                     raise ValueError(f"因子表达式语法错误: {factor_code}")
 
                 result = eval(factor_code, {"__builtins__": {}}, local_vars)
+
+                # 处理不同类型的返回结果
                 if isinstance(result, pd.DataFrame):
                     # 如果返回DataFrame，取第一列
                     result = result.iloc[:, 0]
+                elif isinstance(result, (int, float)):
+                    # 如果是标量值，转换为Series
+                    result = pd.Series([result] * len(df), index=df.index)
+                elif not isinstance(result, pd.Series):
+                    # 其他类型尝试转换
+                    result = pd.Series(result)
+
                 return result
             except Exception as e:
                 import logging
@@ -533,24 +728,107 @@ class FactorService:
         # 使用logging记录调试信息（可通过配置关闭）
         logger.debug(f"Validating factor code, length: {len(code)}")
 
-        # 创建测试数据
+        # 创建更真实的测试数据（避免全相同值）
+        import numpy as np
         test_df = pd.DataFrame({
-            "open": [10.0] * 100,
-            "high": [11.0] * 100,
-            "low": [9.0] * 100,
-            "close": [10.5] * 100,
-            "volume": [1000000] * 100,
+            "open": np.linspace(10.0, 11.0, 100),
+            "high": np.linspace(11.0, 12.0, 100),
+            "low": np.linspace(9.0, 10.0, 100),
+            "close": np.linspace(10.5, 11.5, 100),
+            "volume": np.linspace(1000000, 1100000, 100),
         })
 
         try:
             calculator = FactorCalculator()
             result = calculator.calculate(test_df, code)
+
+            # 检查结果
             if result is None or len(result) == 0:
                 return False, "代码未返回任何结果"
+
+            # 检查是否包含 NaN
+            if result.isna().all():
+                return False, "计算结果全部为NaN，请检查公式"
+
+            # 检查是否包含 Inf
+            if np.isinf(result).any():
+                return False, "计算结果包含无穷大值，请检查公式"
+
+            # 检查是否所有值都相同（可能不是有效的因子）
+            if result.nunique() == 1:
+                return False, "计算结果全部为相同值，可能不是有效的因子"
+
             return True, "验证通过"
-        except Exception as e:
+
+        except ValueError as e:
+            # 捕获因子计算错误
             logger.debug(f"Factor code validation failed: {str(e)}", exc_info=True)
-            return False, f"验证失败: {str(e)}"
+            return False, str(e)
+        except Exception as e:
+            # 捕获其他错误（如 NameError、SyntaxError 等）
+            logger.debug(f"Factor code validation failed: {str(e)}", exc_info=True)
+            # 提供更友好的错误信息
+            error_msg = str(e)
+
+            # 检查常见错误模式
+            if "is not defined" in error_msg:
+                # 提取未定义的变量名
+                import re
+                match = re.search(r"name '(\w+)' is not defined", error_msg)
+                if match:
+                    undefined_name = match.group(1)
+                    # 提供友好的建议
+                    suggestions = []
+
+                    # 检查是否是常见变量名的拼写错误
+                    common_vars = {'close', 'open', 'high', 'low', 'volume', 'np'}
+                    for var in common_vars:
+                        if undefined_name.lower() == var.lower() or undefined_name.lower() in var:
+                            suggestions.append(f"变量名：{var}")
+
+                    # 检查是否是常见函数的拼写错误
+                    common_funcs = {
+                        # TALib 函数
+                        'SMA': 'SMA (简单移动平均)',
+                        'MA': 'SMA 或 MA (简单移动平均)',
+                        'EMA': 'EMA (指数移动平均)',
+                        'RSI': 'RSI (相对强弱指标)',
+                        'MACD': 'MACD (移动平均收敛散度)',
+                        'ATR': 'ATR (平均真实波幅)',
+                        'BBANDS': 'BBANDS (布林带)',
+                        'OBV': 'OBV (能量潮)',
+                        # 麦语言函数
+                        'REF': 'REF (引用n日前的值)',
+                        'HHV': 'HHV (n日内最高值)',
+                        'LLV': 'LLV (n日内最低值)',
+                        'SUM': 'SUM (n日总和)',
+                        'AVE': 'AVE (n日平均值)',
+                        'STD': 'STD (n日标准差)',
+                        'COUNT': 'COUNT (n日内满足条件的次数)',
+                        'EVERY': 'EVERY (n日内是否一直满足条件)',
+                        'EXIST': 'EXIST (n日内是否存在满足条件)',
+                        'CROSS': 'CROSS (金叉：x上穿y)',
+                        'LONGCROSS': 'LONGCROSS (n日内金叉)',
+                        'UP': 'UP (上涨：今日大于n日前)',
+                        'DOWN': 'DOWN (下跌：今日小于n日前)',
+                        'IF': 'IF (条件选择函数)',
+                        'BETWEEN': 'BETWEEN (区间判断)',
+                        'MAX': 'MAX (最大值)',
+                        'MIN': 'MIN (最小值)',
+                        'BARSLAST': 'BARSLAST (上一次满足条件到当前的周期数)',
+                        'CONST': 'CONST (常量序列)'
+                    }
+
+                    for func, desc in common_funcs.items():
+                        if undefined_name.upper() == func or func in undefined_name.upper():
+                            suggestions.append(f"函数：{desc}")
+
+                    if suggestions:
+                        return False, f"未定义的名称 '{undefined_name}'。您是否想使用：{', '.join(suggestions)}？"
+
+                    return False, f"未定义的名称 '{undefined_name}'，请检查拼写。常见变量名：close, open, high, low, volume"
+
+            return False, f"验证失败: {error_msg}"
 
     def calculate_factors_for_stock(
         self,

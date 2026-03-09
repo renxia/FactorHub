@@ -332,16 +332,14 @@ class PortfolioAnalysisService:
 
         n_factors = len(factor_returns.columns)
 
+        # 初始化权重
+        weights = None
+        extra_info = {}
+
         # 1. 等权重
         if method == "equal_weight":
             weights = pd.Series(1.0 / n_factors, index=factor_returns.columns)
-
-            return {
-                "weights": weights.to_dict(),
-                "method": method,
-                "expected_return": float(factor_returns.mean().mean()),
-                "expected_volatility": float(factor_returns.std().mean()),
-            }
+            extra_info["note"] = "等权重分配"
 
         # 2. IC加权（基于因子均值和夏普比率）
         elif method == "ic_weight":
@@ -372,13 +370,7 @@ class PortfolioAnalysisService:
             else:
                 weights = ir_values / ir_values.sum()
 
-            return {
-                "weights": weights.to_dict(),
-                "method": method,
-                "expected_return": float(factor_returns.mean().mean()),
-                "expected_volatility": float(factor_returns.std().mean()),
-                "factor_stats": factor_stats,
-            }
+            extra_info["factor_stats"] = factor_stats
 
         # 3. 风险平价
         elif method == "risk_parity":
@@ -389,18 +381,8 @@ class PortfolioAnalysisService:
             inv_vol = 1.0 / volatilities
             weights = inv_vol / inv_vol.sum()
 
-            return {
-                "weights": weights.to_dict(),
-                "method": method,
-                "expected_return": float(factor_returns.mean().mean()),
-                "expected_volatility": float(factor_returns.std().mean()),
-            }
-
         # 4. 最大夏普比率（简化版：基于历史数据）
         elif method == "max_sharpe":
-            # 计算协方差矩阵
-            cov_matrix = factor_returns.cov()
-
             # 简化方法：使用历史收益率和波动率
             mean_returns = factor_returns.mean()
             std_returns = factor_returns.std()
@@ -420,30 +402,20 @@ class PortfolioAnalysisService:
                 weights = pd.Series(0.0, index=factor_returns.columns)
                 weights.update(sharpe_weights)
 
-            return {
-                "weights": weights.to_dict(),
-                "method": method,
-                "expected_return": float(mean_returns.mean()),
-                "expected_volatility": float(std_returns.mean()),
-                "sharpe_ratios": sharpe_ratios.to_dict(),
-            }
+            extra_info["sharpe_ratios"] = sharpe_ratios.to_dict()
 
-        # 5. 最小方差（简化版）
+        # 5. 最小方差
         elif method == "min_variance":
             # 计算协方差矩阵
             cov_matrix = factor_returns.cov()
 
-            # 简化方法：等权重（由于需要求解优化问题，这里使用简化版）
-            # 实际应用中应该使用cvxpy等优化库
-            weights = pd.Series(1.0 / n_factors, index=factor_returns.columns)
+            # 简化的最小方差：根据因子的方差（对角线）加权
+            # 方差越小，权重越大
+            variances = pd.Series(np.diag(cov_matrix), index=cov_matrix.index)
+            inv_var = 1.0 / (variances + 1e-8)  # 添加小值避免除零
+            weights = inv_var / inv_var.sum()
 
-            return {
-                "weights": weights.to_dict(),
-                "method": method,
-                "expected_return": float(factor_returns.mean().mean()),
-                "expected_volatility": float(factor_returns.std().mean()),
-                "note": "简化版实现，实际应使用优化求解器",
-            }
+            extra_info["note"] = "基于方差倒数的简化最小方差"
 
         else:
             return {
@@ -451,6 +423,35 @@ class PortfolioAnalysisService:
                 "method": method,
                 "error": f"不支持的权重优化方法: {method}"
             }
+
+        # ========== 统一计算基于权重的组合指标 ==========
+
+        # 计算加权期望收益（年化）
+        mean_returns = factor_returns.mean()  # 每个因子的平均收益
+        weighted_return = (weights * mean_returns).sum() * 252  # 年化
+
+        # 计算加权波动率（年化）
+        # 组合方差 = w' * Σ * w
+        cov_matrix = factor_returns.cov() * 252  # 年化协方差矩阵
+        portfolio_variance = np.dot(weights.T, np.dot(cov_matrix.values, weights))
+        weighted_volatility = np.sqrt(portfolio_variance)
+
+        # 计算夏普比率
+        sharpe_ratio = (weighted_return - risk_free_rate) / weighted_volatility if weighted_volatility > 0 else 0
+
+        # 构建返回结果
+        result = {
+            "weights": weights.to_dict(),
+            "method": method,
+            "expected_return": float(weighted_return),
+            "expected_volatility": float(weighted_volatility),
+            "sharpe_ratio": float(sharpe_ratio),
+        }
+
+        # 添加额外信息
+        result.update(extra_info)
+
+        return result
 
     def calculate_combined_factor_score(
         self,

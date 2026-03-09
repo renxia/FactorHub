@@ -97,10 +97,23 @@ async def _run_genetic_mining(task_id: str, request: GeneticMiningRequest):
             data["return"] = data["close"].pct_change()
 
         # 获取基础因子列表
-        # 现在前端传递的是因子代码，直接使用代码即可
+        # 前端传递的是因子名称，需要从数据库获取因子代码
         if request.base_factors and len(request.base_factors) > 0:
-            # 前端已经传递因子代码，直接使用
-            base_factor_codes = request.base_factors
+            # 从数据库获取因子定义
+            from backend.repositories.factor_repository import FactorRepository
+            db = get_db_session()
+            repo = FactorRepository(db)
+
+            base_factor_codes = []
+            for factor_name in request.base_factors:
+                factor = repo.get_by_name(factor_name)
+                if factor:
+                    base_factor_codes.append(factor.code)
+
+            db.close()
+
+            if not base_factor_codes:
+                raise Exception("未找到任何有效的因子定义")
         else:
             # 如果没有指定，使用默认的基础因子代码
             base_factor_codes = [

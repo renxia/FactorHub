@@ -1,407 +1,664 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>组合分析 - FactorFlow</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <!-- 自定义样式 -->
-    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/common.css" />
 
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Fira Sans"', 'sans-serif'],
-                        mono: ['"Fira Code"', 'monospace'],
-                    },
-                    colors: {
-                        primary: {
-                            50: '#EFF6FF',
-                            100: '#DBEAFE',
-                            200: '#BFDBFE',
-                            300: '#93C5FD',
-                            400: '#60A5FA',
-                            500: '#3B82F6',
-                            600: '#2563EB',
-                            700: '#1D4ED8',
-                            800: '#1E40AF',
-                            900: '#1E3A8A',
-                        },
-                        accent: {
-                            500: '#F59E0B',
-                            600: '#D97706',
-                        }
-                    }
-                }
-            }
-        }
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Fira Sans"', "sans-serif"],
+              mono: ['"Fira Code"', "monospace"],
+            },
+            colors: {
+              primary: {
+                50: "#EFF6FF",
+                100: "#DBEAFE",
+                200: "#BFDBFE",
+                300: "#93C5FD",
+                400: "#60A5FA",
+                500: "#3B82F6",
+                600: "#2563EB",
+                700: "#1D4ED8",
+                800: "#1E40AF",
+                900: "#1E3A8A",
+              },
+              accent: {
+                500: "#F59E0B",
+                600: "#D97706",
+              },
+            },
+          },
+        },
+      };
     </script>
-</head>
-<body class="bg-slate-50">
+  </head>
+  <body class="bg-slate-50">
     <!-- 顶部导航栏 -->
-    <header class="bg-gradient-to-r from-primary-700 to-primary-600 text-white shadow-lg">
-        <div class="container mx-auto px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="text-3xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold">FactorFlow</h1>
-                        <p class="text-sm text-primary-100">组合分析</p>
-                    </div>
-                </div>
-                <nav class="hidden md:flex gap-6">
-                    <a href="index.html" class="text-white hover:text-primary-100 font-medium">首页</a>
-                    <a href="factor-management.html" class="text-white hover:text-primary-100 font-medium">因子管理</a>
-                    <a href="factor-mining.html" class="text-white hover:text-primary-100 font-medium">因子挖掘</a>
-                    <a href="portfolio-analysis.html" class="text-white border-b-2 border-white font-medium">组合分析</a>
-                    <a href="backtesting.html" class="text-white hover:text-primary-100 font-medium">策略回测</a>
-                </nav>
+    <header
+      class="bg-gradient-to-r from-primary-700 to-primary-600 text-white shadow-lg"
+    >
+      <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="text-3xl">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-10 h-10"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
             </div>
+            <div>
+              <h1 class="text-2xl font-bold">FactorFlow</h1>
+              <p class="text-sm text-primary-100">组合分析</p>
+            </div>
+          </div>
+          <nav class="hidden md:flex gap-6">
+            <a
+              href="index.html"
+              class="text-white hover:text-primary-100 font-medium"
+              >首页</a
+            >
+            <a
+              href="factor-management.html"
+              class="text-white hover:text-primary-100 font-medium"
+              >因子管理</a
+            >
+            <a
+              href="factor-mining.html"
+              class="text-white hover:text-primary-100 font-medium"
+              >因子挖掘</a
+            >
+            <a
+              href="portfolio-analysis.html"
+              class="text-white border-b-2 border-white font-medium"
+              >组合分析</a
+            >
+            <a
+              href="backtesting.html"
+              class="text-white hover:text-primary-100 font-medium"
+              >策略回测</a
+            >
+          </nav>
         </div>
+      </div>
     </header>
 
     <!-- 主内容区 -->
     <main class="container mx-auto px-6 py-8">
-        <!-- 标签页导航 -->
-        <div class="mb-6">
-            <div class="border-b border-slate-200">
-                <nav class="flex gap-8">
-                    <button onclick="switchTab('optimize')" id="tab-optimize" class="tab-btn py-4 px-2 border-b-2 border-primary-500 text-primary-600 font-medium cursor-pointer transition-all duration-200">
-                        权重优化
-                    </button>
-                    <button onclick="switchTab('composite')" id="tab-composite" class="tab-btn py-4 px-2 border-b-2 border-transparent text-slate-600 hover:text-primary-600 font-medium cursor-pointer transition-all duration-200">
-                        综合得分
-                    </button>
-                    <button onclick="switchTab('compare')" id="tab-compare" class="tab-btn py-4 px-2 border-b-2 border-transparent text-slate-600 hover:text-primary-600 font-medium cursor-pointer transition-all duration-200">
-                        方法对比
-                    </button>
-                </nav>
+      <!-- 标签页导航 -->
+      <div class="mb-6">
+        <div class="border-b border-slate-200">
+          <nav class="flex gap-8">
+            <button
+              onclick="switchTab('optimize')"
+              id="tab-optimize"
+              class="tab-btn py-4 px-2 border-b-2 border-primary-500 text-primary-600 font-medium cursor-pointer transition-all duration-200"
+            >
+              权重优化
+            </button>
+            <button
+              onclick="switchTab('composite')"
+              id="tab-composite"
+              class="tab-btn py-4 px-2 border-b-2 border-transparent text-slate-600 hover:text-primary-600 font-medium cursor-pointer transition-all duration-200"
+            >
+              综合得分
+            </button>
+            <button
+              onclick="switchTab('compare')"
+              id="tab-compare"
+              class="tab-btn py-4 px-2 border-b-2 border-transparent text-slate-600 hover:text-primary-600 font-medium cursor-pointer transition-all duration-200"
+            >
+              方法对比
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- 标签页内容 -->
+      <div id="tab-content">
+        <!-- 权重优化 -->
+        <div id="content-optimize" class="tab-content">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 配置面板 -->
+            <div class="card">
+              <h2 class="text-lg font-bold text-slate-800 mb-4">优化配置</h2>
+
+              <form id="optimize-form" onsubmit="runOptimization(event)">
+                <div class="mb-4">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >股票代码</label
+                  >
+                  <input
+                    type="text"
+                    name="stock_code"
+                    class="input"
+                    value="000001"
+                    placeholder="例如：000001"
+                    required
+                  />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-sm text-slate-600 mb-2"
+                      >开始日期</label
+                    >
+                    <input
+                      type="date"
+                      name="start_date"
+                      id="start-date"
+                      class="input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-slate-600 mb-2"
+                      >结束日期</label
+                    >
+                    <input
+                      type="date"
+                      name="end_date"
+                      id="end-date"
+                      class="input"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="mb-4">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >选择因子（多选）</label
+                  >
+                  <div
+                    id="factors-checkboxes"
+                    class="space-y-2 max-h-48 overflow-y-auto"
+                  >
+                    <p class="text-slate-600 text-sm">加载中...</p>
+                  </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="mb-4">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >优化方法</label
+                  >
+                  <select name="optimization_method" class="select">
+                    <option value="equal_weight">等权重</option>
+                    <option value="ic_weight">IC加权</option>
+                    <option value="ir_weight">IR加权</option>
+                    <option value="max_sharpe">最大夏普</option>
+                    <option value="max_return">最大收益</option>
+                    <option value="min_variance">最小方差</option>
+                  </select>
+                </div>
+
+                <div class="mb-6">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >回测周期</label
+                  >
+                  <select name="rebalance_freq" class="select">
+                    <option value="daily">日频</option>
+                    <option value="weekly">周频</option>
+                    <option value="monthly" selected>月频</option>
+                    <option value="quarterly">季频</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  class="btn btn-primary w-full cursor-pointer transition-all duration-200"
+                >
+                  开始优化
+                </button>
+              </form>
             </div>
+
+            <!-- 结果展示 -->
+            <div class="lg:col-span-2">
+              <div class="card">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">优化结果</h2>
+
+                <!-- 等待提示 -->
+                <div id="optimize-placeholder" class="text-center py-12">
+                  <p class="text-slate-600">
+                    选择因子和优化方法后点击"开始优化"
+                  </p>
+                </div>
+
+                <!-- 优化结果内容 -->
+                <div id="optimize-result" class="hidden">
+                  <!-- 最优权重 -->
+                  <div class="mb-6">
+                    <h3 class="font-semibold text-slate-800 mb-3">
+                      最优权重分配
+                    </h3>
+                    <div
+                      id="weights-display"
+                      class="grid grid-cols-2 md:grid-cols-4 gap-3"
+                    >
+                      <!-- 动态填充 -->
+                    </div>
+                  </div>
+
+                  <!-- 性能指标 -->
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-primary-50 rounded-lg p-4">
+                      <p class="text-sm text-slate-600">组合收益率</p>
+                      <p class="text-2xl font-bold mt-1" id="portfolio-return">
+                        -
+                      </p>
+                    </div>
+                    <div class="bg-primary-50 rounded-lg p-4">
+                      <p class="text-sm text-slate-600">组合IC</p>
+                      <p class="text-2xl font-bold mt-1" id="portfolio-ic">-</p>
+                    </div>
+                    <div class="bg-primary-50 rounded-lg p-4">
+                      <p class="text-sm text-slate-600">组合IR</p>
+                      <p class="text-2xl font-bold mt-1" id="portfolio-ir">-</p>
+                    </div>
+                    <div class="bg-primary-50 rounded-lg p-4">
+                      <p class="text-sm text-slate-600">因子数</p>
+                      <p
+                        class="text-2xl font-bold text-slate-800 mt-1"
+                        id="factor-count"
+                      >
+                        -
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- 权重对比图 -->
+                  <div>
+                    <h3 class="font-semibold text-slate-800 mb-3">权重分布</h3>
+                    <div class="chart-container">
+                      <canvas id="weights-chart"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- 权重饼图 -->
+                  <div class="mt-6">
+                    <h3 class="font-semibold text-slate-800 mb-3">权重占比</h3>
+                    <div class="chart-container">
+                      <canvas id="weights-pie-chart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- 标签页内容 -->
-        <div id="tab-content">
-            <!-- 权重优化 -->
-            <div id="content-optimize" class="tab-content">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- 配置面板 -->
-                    <div class="card">
-                        <h2 class="text-lg font-bold text-slate-800 mb-4">优化配置</h2>
+        <!-- 综合得分 -->
+        <div id="content-composite" class="tab-content hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 配置面板 -->
+            <div class="card">
+              <h2 class="text-lg font-bold text-slate-800 mb-4">
+                综合得分配置
+              </h2>
+              <p class="text-slate-600 mb-6 text-sm">
+                计算多个因子的综合得分，用于股票排序和选股。
+              </p>
 
-                        <form id="optimize-form" onsubmit="runOptimization(event)">
-                            <div class="mb-4">
-                                <label class="block text-sm text-slate-600 mb-2">股票代码</label>
-                                <input type="text" name="stock_code" class="input" value="000001" placeholder="例如：000001" required>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm text-slate-600 mb-2">开始日期</label>
-                                    <input type="date" name="start_date" id="start-date" class="input" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm text-slate-600 mb-2">结束日期</label>
-                                    <input type="date" name="end_date" id="end-date" class="input" required>
-                                </div>
-                            </div>
-
-                            <hr class="my-4">
-
-                            <div class="mb-4">
-                                <label class="block text-sm text-slate-600 mb-2">选择因子（多选）</label>
-                                <div id="factors-checkboxes" class="space-y-2 max-h-48 overflow-y-auto">
-                                    <p class="text-slate-600 text-sm">加载中...</p>
-                                </div>
-                            </div>
-
-                            <hr class="my-4">
-
-                            <div class="mb-4">
-                                <label class="block text-sm text-slate-600 mb-2">优化方法</label>
-                                <select name="optimization_method" class="select">
-                                    <option value="equal_weight">等权重</option>
-                                    <option value="ic_weight">IC加权</option>
-                                    <option value="ir_weight">IR加权</option>
-                                    <option value="max_sharpe">最大夏普</option>
-                                    <option value="max_return">最大收益</option>
-                                    <option value="min_variance">最小方差</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-6">
-                                <label class="block text-sm text-slate-600 mb-2">回测周期</label>
-                                <select name="rebalance_freq" class="select">
-                                    <option value="daily">日频</option>
-                                    <option value="weekly">周频</option>
-                                    <option value="monthly" selected>月频</option>
-                                    <option value="quarterly">季频</option>
-                                </select>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary w-full cursor-pointer transition-all duration-200">
-                                开始优化
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- 结果展示 -->
-                    <div class="lg:col-span-2">
-                        <div class="card">
-                            <h2 class="text-lg font-bold text-slate-800 mb-4">优化结果</h2>
-
-                            <!-- 等待提示 -->
-                            <div id="optimize-placeholder" class="text-center py-12">
-                                <p class="text-slate-600">选择因子和优化方法后点击"开始优化"</p>
-                            </div>
-
-                            <!-- 优化结果内容 -->
-                            <div id="optimize-result" class="hidden">
-                                <!-- 最优权重 -->
-                                <div class="mb-6">
-                                    <h3 class="font-semibold text-slate-800 mb-3">最优权重分配</h3>
-                                    <div id="weights-display" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        <!-- 动态填充 -->
-                                    </div>
-                                </div>
-
-                                <!-- 性能指标 -->
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                    <div class="bg-primary-50 rounded-lg p-4">
-                                        <p class="text-sm text-slate-600">组合收益率</p>
-                                        <p class="text-2xl font-bold mt-1" id="portfolio-return">-</p>
-                                    </div>
-                                    <div class="bg-primary-50 rounded-lg p-4">
-                                        <p class="text-sm text-slate-600">组合IC</p>
-                                        <p class="text-2xl font-bold mt-1" id="portfolio-ic">-</p>
-                                    </div>
-                                    <div class="bg-primary-50 rounded-lg p-4">
-                                        <p class="text-sm text-slate-600">组合IR</p>
-                                        <p class="text-2xl font-bold mt-1" id="portfolio-ir">-</p>
-                                    </div>
-                                    <div class="bg-primary-50 rounded-lg p-4">
-                                        <p class="text-sm text-slate-600">因子数</p>
-                                        <p class="text-2xl font-bold text-slate-800 mt-1" id="factor-count">-</p>
-                                    </div>
-                                </div>
-
-                                <!-- 权重对比图 -->
-                                <div>
-                                    <h3 class="font-semibold text-slate-800 mb-3">权重分布</h3>
-                                    <div class="chart-container-small">
-                                        <canvas id="weights-chart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+              <form id="composite-form" onsubmit="runCompositeScore(event)">
+                <div class="mb-4">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >股票代码</label
+                  >
+                  <input
+                    type="text"
+                    name="stock_code"
+                    class="input"
+                    value="000001"
+                    placeholder="例如：000001"
+                    required
+                  />
                 </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-sm text-slate-600 mb-2"
+                      >开始日期</label
+                    >
+                    <input
+                      type="date"
+                      name="start_date"
+                      id="composite-start-date"
+                      class="input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-slate-600 mb-2"
+                      >结束日期</label
+                    >
+                    <input
+                      type="date"
+                      name="end_date"
+                      id="composite-end-date"
+                      class="input"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="mb-4">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >选择因子（多选）</label
+                  >
+                  <div
+                    id="composite-factors-checkboxes"
+                    class="space-y-2 max-h-48 overflow-y-auto"
+                  >
+                    <p class="text-slate-600 text-sm">加载中...</p>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  class="btn btn-primary w-full cursor-pointer transition-all duration-200"
+                >
+                  计算得分
+                </button>
+              </form>
             </div>
 
-            <!-- 综合得分 -->
-            <div id="content-composite" class="tab-content hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- 配置面板 -->
-                    <div class="card">
-                        <h2 class="text-lg font-bold text-slate-800 mb-4">综合得分配置</h2>
-                        <p class="text-slate-600 mb-6 text-sm">计算多个因子的综合得分，用于股票排序和选股。</p>
+            <!-- 结果展示 -->
+            <div class="lg:col-span-2">
+              <div class="card">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">
+                  综合得分结果
+                </h2>
 
-                        <form id="composite-form" onsubmit="runCompositeScore(event)">
-                            <div class="mb-4">
-                                <label class="block text-sm text-slate-600 mb-2">股票代码</label>
-                                <input type="text" name="stock_code" class="input" value="000001" placeholder="例如：000001" required>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm text-slate-600 mb-2">开始日期</label>
-                                    <input type="date" name="start_date" id="composite-start-date" class="input" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm text-slate-600 mb-2">结束日期</label>
-                                    <input type="date" name="end_date" id="composite-end-date" class="input" required>
-                                </div>
-                            </div>
-
-                            <hr class="my-4">
-
-                            <div class="mb-4">
-                                <label class="block text-sm text-slate-600 mb-2">选择因子（多选）</label>
-                                <div id="composite-factors-checkboxes" class="space-y-2 max-h-48 overflow-y-auto">
-                                    <p class="text-slate-600 text-sm">加载中...</p>
-                                </div>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary w-full cursor-pointer transition-all duration-200">
-                                计算得分
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- 结果展示 -->
-                    <div class="lg:col-span-2">
-                        <div class="card">
-                            <h2 class="text-lg font-bold text-slate-800 mb-4">综合得分结果</h2>
-
-                            <!-- 等待提示 -->
-                            <div id="composite-placeholder" class="text-center py-12">
-                                <p class="text-slate-600">选择因子后点击"计算得分"</p>
-                            </div>
-
-                            <!-- 结果内容 -->
-                            <div id="composite-result" class="hidden">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <h3 class="font-semibold text-slate-800 mb-3">综合得分序列</h3>
-                                        <div class="bg-slate-50 rounded-lg p-4">
-                                            <div class="chart-container-small">
-                                                <canvas id="composite-score-chart"></canvas>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-semibold text-slate-800 mb-3">得分统计</h3>
-                                        <div class="grid grid-cols-2 gap-3">
-                                            <div class="bg-primary-50 rounded-lg p-3">
-                                                <p class="text-xs text-slate-600">均值</p>
-                                                <p class="text-lg font-bold text-primary-600" id="composite-mean">-</p>
-                                            </div>
-                                            <div class="bg-primary-50 rounded-lg p-3">
-                                                <p class="text-xs text-slate-600">标准差</p>
-                                                <p class="text-lg font-bold text-primary-600" id="composite-std">-</p>
-                                            </div>
-                                            <div class="bg-primary-50 rounded-lg p-3">
-                                                <p class="text-xs text-slate-600">最小值</p>
-                                                <p class="text-lg font-bold text-slate-800" id="composite-min">-</p>
-                                            </div>
-                                            <div class="bg-primary-50 rounded-lg p-3">
-                                                <p class="text-xs text-slate-600">最大值</p>
-                                                <p class="text-lg font-bold text-slate-800" id="composite-max">-</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- 等待提示 -->
+                <div id="composite-placeholder" class="text-center py-12">
+                  <p class="text-slate-600">选择因子后点击"计算得分"</p>
                 </div>
-            </div>
 
-            <!-- 方法对比 -->
-            <div id="content-compare" class="tab-content hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- 配置面板 -->
-                    <div class="card">
-                        <h2 class="text-lg font-bold text-slate-800 mb-4">方法对比配置</h2>
-                        <p class="text-slate-600 mb-6 text-sm">对比不同权重分配方法的效果。</p>
-
-                        <form id="compare-form" onsubmit="runMethodCompare(event)">
-                            <div class="mb-4">
-                                <label class="block text-sm text-slate-600 mb-2">股票代码</label>
-                                <input type="text" name="stock_code" class="input" value="000001" placeholder="例如：000001" required>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label class="block text-sm text-slate-600 mb-2">开始日期</label>
-                                    <input type="date" name="start_date" id="compare-start-date" class="input" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm text-slate-600 mb-2">结束日期</label>
-                                    <input type="date" name="end_date" id="compare-end-date" class="input" required>
-                                </div>
-                            </div>
-
-                            <hr class="my-4">
-
-                            <div class="mb-4">
-                                <label class="block text-sm text-slate-600 mb-2">选择因子（多选）</label>
-                                <div id="compare-factors-checkboxes" class="space-y-2 max-h-48 overflow-y-auto">
-                                    <p class="text-slate-600 text-sm">加载中...</p>
-                                </div>
-                            </div>
-
-                            <hr class="my-4">
-
-                            <div class="mb-4">
-                                <label class="block text-sm text-slate-600 mb-2">对比方法（多选）</label>
-                                <div class="space-y-2">
-                                    <label class="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer">
-                                        <input type="checkbox" name="methods" value="equal_weight" checked class="w-4 h-4">
-                                        <span class="text-sm">等权重</span>
-                                    </label>
-                                    <label class="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer">
-                                        <input type="checkbox" name="methods" value="ic_weight" checked class="w-4 h-4">
-                                        <span class="text-sm">IC加权</span>
-                                    </label>
-                                    <label class="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer">
-                                        <input type="checkbox" name="methods" value="ir_weight" class="w-4 h-4">
-                                        <span class="text-sm">IR加权</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary w-full cursor-pointer transition-all duration-200">
-                                对比方法
-                            </button>
-                        </form>
+                <!-- 结果内容 -->
+                <div id="composite-result" class="hidden">
+                  <!-- 综合得分序列和分布 -->
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <h3 class="font-semibold text-slate-800 mb-3">
+                        综合得分时序图
+                      </h3>
+                      <div class="chart-container">
+                        <canvas id="composite-score-chart"></canvas>
+                      </div>
                     </div>
-
-                    <!-- 结果展示 -->
-                    <div class="lg:col-span-2">
-                        <div class="card">
-                            <h2 class="text-lg font-bold text-slate-800 mb-4">方法对比结果</h2>
-
-                            <!-- 等待提示 -->
-                            <div id="compare-placeholder" class="text-center py-12">
-                                <div class="text-6xl mb-4">📈</div>
-                                <p class="text-slate-600">选择因子和方法后点击"对比方法"</p>
-                            </div>
-
-                            <!-- 结果内容 -->
-                            <div id="compare-result" class="hidden">
-                                <div class="mb-6">
-                                    <h3 class="font-semibold text-slate-800 mb-3">方法对比结果</h3>
-                                    <div class="chart-container-small">
-                                        <canvas id="compare-chart"></canvas>
-                                    </div>
-                                </div>
-
-                                <div class="overflow-x-auto">
-                                    <table class="w-full">
-                                        <thead>
-                                            <tr class="border-b border-slate-200">
-                                                <th class="py-3 px-4 text-left">方法</th>
-                                                <th class="py-3 px-4 text-right">年化收益</th>
-                                                <th class="py-3 px-4 text-right">波动率</th>
-                                                <th class="py-3 px-4 text-right">夏普比率</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="compare-table">
-                                            <!-- 动态填充 -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                    <div>
+                      <h3 class="font-semibold text-slate-800 mb-3">
+                        得分分布直方图
+                      </h3>
+                      <div class="chart-container">
+                        <canvas id="composite-distribution-chart"></canvas>
+                      </div>
                     </div>
+                  </div>
+
+                  <!-- 得分统计指标 -->
+                  <div>
+                    <h3 class="font-semibold text-slate-800 mb-3">统计指标</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div class="bg-primary-50 rounded-lg p-3">
+                        <p class="text-xs text-slate-600">均值</p>
+                        <p
+                          class="text-lg font-bold text-primary-600"
+                          id="composite-mean"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-primary-50 rounded-lg p-3">
+                        <p class="text-xs text-slate-600">标准差</p>
+                        <p
+                          class="text-lg font-bold text-primary-600"
+                          id="composite-std"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-primary-50 rounded-lg p-3">
+                        <p class="text-xs text-slate-600">最小值</p>
+                        <p
+                          class="text-lg font-bold text-slate-800"
+                          id="composite-min"
+                        >
+                          -
+                        </p>
+                      </div>
+                      <div class="bg-primary-50 rounded-lg p-3">
+                        <p class="text-xs text-slate-600">最大值</p>
+                        <p
+                          class="text-lg font-bold text-slate-800"
+                          id="composite-max"
+                        >
+                          -
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </div>
             </div>
+          </div>
         </div>
+
+        <!-- 方法对比 -->
+        <div id="content-compare" class="tab-content hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 配置面板 -->
+            <div class="card">
+              <h2 class="text-lg font-bold text-slate-800 mb-4">
+                方法对比配置
+              </h2>
+              <p class="text-slate-600 mb-6 text-sm">
+                对比不同权重分配方法的效果。
+              </p>
+
+              <form id="compare-form" onsubmit="runMethodCompare(event)">
+                <div class="mb-4">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >股票代码</label
+                  >
+                  <input
+                    type="text"
+                    name="stock_code"
+                    class="input"
+                    value="000001"
+                    placeholder="例如：000001"
+                    required
+                  />
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-sm text-slate-600 mb-2"
+                      >开始日期</label
+                    >
+                    <input
+                      type="date"
+                      name="start_date"
+                      id="compare-start-date"
+                      class="input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm text-slate-600 mb-2"
+                      >结束日期</label
+                    >
+                    <input
+                      type="date"
+                      name="end_date"
+                      id="compare-end-date"
+                      class="input"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="mb-4">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >选择因子（多选）</label
+                  >
+                  <div
+                    id="compare-factors-checkboxes"
+                    class="space-y-2 max-h-48 overflow-y-auto"
+                  >
+                    <p class="text-slate-600 text-sm">加载中...</p>
+                  </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="mb-4">
+                  <label class="block text-sm text-slate-600 mb-2"
+                    >对比方法（多选）</label
+                  >
+                  <div class="space-y-2">
+                    <label
+                      class="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        name="methods"
+                        value="equal_weight"
+                        checked
+                        class="w-4 h-4"
+                      />
+                      <span class="text-sm">等权重</span>
+                    </label>
+                    <label
+                      class="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        name="methods"
+                        value="ic_weight"
+                        checked
+                        class="w-4 h-4"
+                      />
+                      <span class="text-sm">IC加权</span>
+                    </label>
+                    <label
+                      class="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        name="methods"
+                        value="ir_weight"
+                        class="w-4 h-4"
+                      />
+                      <span class="text-sm">IR加权</span>
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  class="btn btn-primary w-full cursor-pointer transition-all duration-200"
+                >
+                  对比方法
+                </button>
+              </form>
+            </div>
+
+            <!-- 结果展示 -->
+            <div class="lg:col-span-2">
+              <div class="card">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">
+                  方法对比结果
+                </h2>
+
+                <!-- 等待提示 -->
+                <div id="compare-placeholder" class="text-center py-12">
+                  <p class="text-slate-600">选择因子和方法后点击"对比方法"</p>
+                </div>
+
+                <!-- 结果内容 -->
+                <div id="compare-result" class="hidden">
+                  <!-- 方法对比柱状图 -->
+                  <div class="mb-6">
+                    <h3 class="font-semibold text-slate-800 mb-3">
+                      方法性能对比
+                    </h3>
+                    <div class="chart-container">
+                      <canvas id="compare-chart"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- 夏普比率对比图 -->
+                  <div class="mb-6">
+                    <h3 class="font-semibold text-slate-800 mb-3">
+                      夏普比率对比
+                    </h3>
+                    <div class="chart-container">
+                      <canvas id="sharpe-compare-chart"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- 详细数据表格 -->
+                  <div>
+                    <h3 class="font-semibold text-slate-800 mb-3">详细数据</h3>
+                    <div class="overflow-x-auto">
+                      <table class="w-full">
+                        <thead>
+                          <tr class="border-b border-slate-200">
+                            <th class="py-3 px-4 text-left">方法</th>
+                            <th class="py-3 px-4 text-right">年化收益</th>
+                            <th class="py-3 px-4 text-right">波动率</th>
+                            <th class="py-3 px-4 text-right">夏普比率</th>
+                          </tr>
+                        </thead>
+                        <tbody id="compare-table">
+                          <!-- 动态填充 -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <!-- 脚本 -->
@@ -410,457 +667,794 @@
     <script src="js/chart-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
-        let weightsChart = null;
-        let compositeScoreChart = null;
-        let compareChart = null;
+      let weightsChart = null;
+      let weightsPieChart = null;
+      let compositeScoreChart = null;
+      let compositeDistributionChart = null;
+      let compareChart = null;
+      let sharpeCompareChart = null;
 
-        // 切换标签页
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('border-primary-500', 'text-primary-600');
-                el.classList.add('border-transparent', 'text-slate-600');
-            });
+      // 切换标签页
+      function switchTab(tabName) {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((el) => el.classList.add("hidden"));
+        document.querySelectorAll(".tab-btn").forEach((el) => {
+          el.classList.remove("border-primary-500", "text-primary-600");
+          el.classList.add("border-transparent", "text-slate-600");
+        });
 
-            document.getElementById(`content-${tabName}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabName}`).classList.remove('border-transparent', 'text-slate-600');
-            document.getElementById(`tab-${tabName}`).classList.add('border-primary-500', 'text-primary-600');
-        }
+        document
+          .getElementById(`content-${tabName}`)
+          .classList.remove("hidden");
+        document
+          .getElementById(`tab-${tabName}`)
+          .classList.remove("border-transparent", "text-slate-600");
+        document
+          .getElementById(`tab-${tabName}`)
+          .classList.add("border-primary-500", "text-primary-600");
+      }
 
-        // 加载因子列表
-        async function loadFactors() {
-            try {
-                const result = await api.getFactors();
-                if (result.success) {
-                    const container = document.getElementById('factors-checkboxes');
-                    container.innerHTML = result.data.map(factor => `
+      // 加载因子列表
+      async function loadFactors() {
+        try {
+          const result = await api.getFactors();
+          if (result.success) {
+            const container = document.getElementById("factors-checkboxes");
+            container.innerHTML = result.data
+              .map(
+                (factor) => `
                         <label class="flex items-center gap-2 p-2 hover:bg-primary-50 rounded cursor-pointer">
                             <input type="checkbox" name="factors" value="${factor.name}" class="w-4 h-4">
                             <span class="text-sm">${factor.name}</span>
                         </label>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('加载因子失败:', error);
-            }
+                    `,
+              )
+              .join("");
+          }
+        } catch (error) {
+          console.error("加载因子失败:", error);
+        }
+      }
+
+      // 运行优化
+      async function runOptimization(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = collectFormData(form);
+
+        // 获取选中的因子
+        const selectedFactors = Array.from(
+          form.querySelectorAll('input[name="factors"]:checked'),
+        ).map((cb) => cb.value);
+
+        if (selectedFactors.length === 0) {
+          showToast("请至少选择一个因子", "warning");
+          return;
         }
 
-        // 运行优化
-        async function runOptimization(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = collectFormData(form);
+        const requestData = {
+          stock_code: formData.stock_code,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          factors: selectedFactors,
+          method: formData.optimization_method,
+          rebalance_freq: formData.rebalance_freq,
+        };
 
-            // 获取选中的因子
-            const selectedFactors = Array.from(form.querySelectorAll('input[name="factors"]:checked'))
-                .map(cb => cb.value);
+        try {
+          showLoading("优化中，请稍候...");
+          const result = await api.optimizeWeights(requestData);
 
-            if (selectedFactors.length === 0) {
-                showToast('请至少选择一个因子', 'warning');
-                return;
-            }
-
-            const requestData = {
-                stock_code: formData.stock_code,
-                start_date: formData.start_date,
-                end_date: formData.end_date,
-                factors: selectedFactors,
-                method: formData.optimization_method,
-                rebalance_freq: formData.rebalance_freq
-            };
-
-            try {
-                showLoading('优化中，请稍候...');
-                const result = await api.optimizeWeights(requestData);
-
-                if (result.success) {
-                    displayOptimizationResult(result.data);
-                    showToast('优化完成', 'success');
-                }
-            } catch (error) {
-                console.error('优化失败:', error);
-                showToast('优化失败', 'error');
-            } finally {
-                hideLoading();
-            }
+          if (result.success) {
+            displayOptimizationResult(result.data);
+            showToast("优化完成", "success");
+          }
+        } catch (error) {
+          console.error("优化失败:", error);
+          showToast("优化失败", "error");
+        } finally {
+          hideLoading();
         }
+      }
 
-        // 显示优化结果
-        function displayOptimizationResult(data) {
-            document.getElementById('optimize-placeholder').classList.add('hidden');
-            document.getElementById('optimize-result').classList.remove('hidden');
+      // 显示优化结果
+      function displayOptimizationResult(data) {
+        document.getElementById("optimize-placeholder").classList.add("hidden");
+        document.getElementById("optimize-result").classList.remove("hidden");
 
-            // 显示权重
-            const weightsDisplay = document.getElementById('weights-display');
-            const weights = data.weights || {};
+        // 显示权重
+        const weightsDisplay = document.getElementById("weights-display");
+        const weights = data.weights || {};
 
-            weightsDisplay.innerHTML = Object.entries(weights).map(([name, weight]) => `
+        weightsDisplay.innerHTML = Object.entries(weights)
+          .map(
+            ([name, weight]) => `
                 <div class="bg-slate-50 rounded-lg p-3 text-center">
                     <p class="text-xs text-slate-600 mb-1">${name}</p>
                     <p class="text-lg font-bold text-primary-600">${(weight * 100).toFixed(1)}%</p>
                 </div>
-            `).join('');
+            `,
+          )
+          .join("");
 
-            // 显示性能指标（使用动态颜色）
-            const metrics = data.metrics || {};
+        // 显示性能指标（使用动态颜色）
+        const metrics = data.metrics || {};
 
-            // 辅助函数：更新带颜色的数值
-            const updateValueWithColor = (elementId, value, formatter = v => v) => {
-                const el = document.getElementById(elementId);
-                el.textContent = formatter(value);
-                el.className = `text-2xl font-bold mt-1 ${
-                    value > 0 ? 'text-accent-red' :
-                    value < 0 ? 'text-accent-green' :
-                    'text-slate-600'
-                }`;
-            };
+        // 辅助函数：更新带颜色的数值
+        const updateValueWithColor = (
+          elementId,
+          value,
+          formatter = (v) => v,
+        ) => {
+          const el = document.getElementById(elementId);
+          el.textContent = formatter(value);
+          el.className = `text-2xl font-bold mt-1 ${
+            value > 0
+              ? "text-accent-red"
+              : value < 0
+                ? "text-accent-green"
+                : "text-slate-600"
+          }`;
+        };
 
-            updateValueWithColor('portfolio-return', metrics.return, formatPercent);
-            updateValueWithColor('portfolio-ic', metrics.ic, v => v?.toFixed(4) || '-');
-            updateValueWithColor('portfolio-ir', metrics.ir, v => v?.toFixed(4) || '-');
+        updateValueWithColor("portfolio-return", metrics.return, formatPercent);
+        updateValueWithColor(
+          "portfolio-ic",
+          metrics.ic,
+          (v) => v?.toFixed(4) || "-",
+        );
+        updateValueWithColor(
+          "portfolio-ir",
+          metrics.ir,
+          (v) => v?.toFixed(4) || "-",
+        );
 
-            document.getElementById('factor-count').textContent = Object.keys(weights).length;
-
-            // 绘制权重图
-            drawWeightsChart(weights);
-        }
+        document.getElementById("factor-count").textContent =
+          Object.keys(weights).length;
 
         // 绘制权重图
-        function drawWeightsChart(weights) {
-            const ctx = document.getElementById('weights-chart').getContext('2d');
+        drawWeightsChart(weights);
+      }
 
-            if (weightsChart) {
-                weightsChart.destroy();
-            }
+      // 绘制权重图
+      function drawWeightsChart(weights) {
+        const ctx = document.getElementById("weights-chart").getContext("2d");
 
-            const labels = Object.keys(weights);
-            const data = Object.values(weights).map(w => w * 100);
-
-            weightsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '权重(%)',
-                        data: data,
-                        backgroundColor: ChartColors.primaryBg.replace('0.1', '0.6'),
-                        borderColor: ChartColors.primary,
-                        borderWidth: 1
-                    }]
-                },
-                options: getNoLegendChartOptions({
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: value => value + '%'
-                            }
-                        }
-                    }
-                })
-            });
+        if (weightsChart) {
+          weightsChart.destroy();
         }
 
-        // 页面加载时执行
-        document.addEventListener('DOMContentLoaded', () => {
-            initDates();
-            loadFactors();
-            loadCompositeFactors();
-            loadCompareFactors();
+        const labels = Object.keys(weights);
+        const data = Object.values(weights).map((w) => w * 100);
+
+        // 使用多种颜色
+        const colors = ChartColors.getDatasetColors(labels.length);
+        const bgColors = ChartColors.getDatasetBgColors(labels.length, 0.6);
+
+        weightsChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "权重(%)",
+                data: data,
+                backgroundColor: bgColors,
+                borderColor: colors,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: getBarChartOptions({
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return `${context.dataset.label}: ${context.raw.toFixed(2)}%`;
+                  },
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: (value) => value + "%",
+                  font: {
+                    family: "'Fira Code', monospace",
+                  },
+                },
+              },
+            },
+          }),
         });
 
-        // 初始化所有日期
-        function initDates() {
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setFullYear(startDate.getFullYear() - 1);
+        // 绘制权重饼图
+        drawWeightsPieChart(weights);
+      }
 
-            const formatDate = (d) => d.toISOString().split('T')[0];
+      // 绘制权重饼图
+      function drawWeightsPieChart(weights) {
+        const ctx = document
+          .getElementById("weights-pie-chart")
+          .getContext("2d");
 
-            // 权重优化日期
-            document.getElementById('start-date').value = formatDate(startDate);
-            document.getElementById('end-date').value = formatDate(endDate);
-
-            // 综合得分日期
-            document.getElementById('composite-start-date').value = formatDate(startDate);
-            document.getElementById('composite-end-date').value = formatDate(endDate);
-
-            // 方法对比日期
-            document.getElementById('compare-start-date').value = formatDate(startDate);
-            document.getElementById('compare-end-date').value = formatDate(endDate);
+        if (weightsPieChart) {
+          weightsPieChart.destroy();
         }
 
-        // 加载综合得分因子
-        async function loadCompositeFactors() {
-            try {
-                const result = await api.getFactors();
-                if (result.success) {
-                    const container = document.getElementById('composite-factors-checkboxes');
-                    container.innerHTML = result.data.map(factor => `
-                        <label class="flex items-center gap-2 p-2 hover:bg-primary-50 rounded cursor-pointer">
-                            <input type="checkbox" name="factors" value="${factor.name}" class="w-4 h-4">
-                            <span class="text-sm">${factor.name}</span>
-                        </label>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('加载因子失败:', error);
-            }
-        }
+        const labels = Object.keys(weights);
+        const data = Object.values(weights).map((w) => w * 100);
 
-        // 加载方法对比因子
-        async function loadCompareFactors() {
-            try {
-                const result = await api.getFactors();
-                if (result.success) {
-                    const container = document.getElementById('compare-factors-checkboxes');
-                    container.innerHTML = result.data.map(factor => `
-                        <label class="flex items-center gap-2 p-2 hover:bg-primary-50 rounded cursor-pointer">
-                            <input type="checkbox" name="factors" value="${factor.name}" class="w-4 h-4">
-                            <span class="text-sm">${factor.name}</span>
-                        </label>
-                    `).join('');
-                }
-            } catch (error) {
-                console.error('加载因子失败:', error);
-            }
-        }
+        // 使用多种颜色
+        const colors = ChartColors.getDatasetColors(labels.length);
+        const bgColors = ChartColors.getDatasetBgColors(labels.length, 0.7);
 
-        // 运行综合得分计算
-        async function runCompositeScore(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = collectFormData(form);
-
-            const selectedFactors = Array.from(form.querySelectorAll('input[name="factors"]:checked'))
-                .map(cb => cb.value);
-
-            if (selectedFactors.length === 0) {
-                showToast('请至少选择一个因子', 'warning');
-                return;
-            }
-
-            const requestData = {
-                stock_code: formData.stock_code,
-                start_date: formData.start_date,
-                end_date: formData.end_date,
-                factors: selectedFactors
-            };
-
-            try {
-                showLoading('计算中，请稍候...');
-                const result = await api.calculateCompositeScore(requestData);
-
-                if (result.success) {
-                    displayCompositeScore(result.data);
-                    showToast('计算完成', 'success');
-                }
-            } catch (error) {
-                console.error('计算失败:', error);
-                showToast('计算失败', 'error');
-            } finally {
-                hideLoading();
-            }
-        }
-
-        // 显示综合得分结果
-        function displayCompositeScore(data) {
-            document.getElementById('composite-placeholder').classList.add('hidden');
-            document.getElementById('composite-result').classList.remove('hidden');
-
-            const values = data.values || [];
-            const dates = data.dates || [];
-
-            // 计算统计指标
-            if (values.length > 0) {
-                const mean = values.reduce((a, b) => a + b, 0) / values.length;
-                const std = Math.sqrt(values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length);
-                const min = Math.min(...values);
-                const max = Math.max(...values);
-
-                document.getElementById('composite-mean').textContent = mean.toFixed(4);
-                document.getElementById('composite-std').textContent = std.toFixed(4);
-                document.getElementById('composite-min').textContent = min.toFixed(4);
-                document.getElementById('composite-max').textContent = max.toFixed(4);
-
-                // 绘制图表
-                drawCompositeScoreChart(dates, values);
-            }
-        }
-
-        // 绘制综合得分图表
-        function drawCompositeScoreChart(dates, values) {
-            const ctx = document.getElementById('composite-score-chart').getContext('2d');
-
-            if (compositeScoreChart) {
-                compositeScoreChart.destroy();
-            }
-
-            // 采样显示，避免数据点过多
-            const maxPoints = 100;
-            let displayDates = dates;
-            let displayValues = values;
-
-            if (values.length > maxPoints) {
-                const step = Math.ceil(values.length / maxPoints);
-                displayDates = dates.filter((_, i) => i % step === 0);
-                displayValues = values.filter((_, i) => i % step === 0);
-            }
-
-            compositeScoreChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: displayDates,
-                    datasets: [{
-                        label: '综合得分',
-                        data: displayValues,
-                        borderColor: ChartColors.primary,
-                        backgroundColor: ChartColors.primaryBg,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0
-                    }]
+        weightsPieChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                data: data,
+                backgroundColor: bgColors,
+                borderColor: colors,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "right",
+                labels: {
+                  font: {
+                    family: "'Fira Sans', sans-serif",
+                    size: 12,
+                  },
+                  padding: 15,
+                  generateLabels: function (chart) {
+                    const data = chart.data;
+                    return data.labels.map((label, i) => ({
+                      text: `${label}: ${data.datasets[0].data[i].toFixed(2)}%`,
+                      fillStyle: data.datasets[0].backgroundColor[i],
+                      hidden: false,
+                      index: i,
+                    }));
+                  },
                 },
-                options: getNoLegendChartOptions({
-                    scales: {
-                        y: {
-                            beginAtZero: false
-                        },
-                        x: {
-                            display: false
-                        }
-                    }
-                })
-            });
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return `${context.label}: ${context.raw.toFixed(2)}%`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      // 页面加载时执行
+      document.addEventListener("DOMContentLoaded", () => {
+        initDates();
+        loadFactors();
+        loadCompositeFactors();
+        loadCompareFactors();
+      });
+
+      // 辅助函数：获取数值对应的颜色类
+      function getValueColor(value) {
+        if (value === undefined || value === null || value === "-") {
+          return "";
+        }
+        const numValue = typeof value === "number" ? value : parseFloat(value);
+        if (isNaN(numValue)) {
+          return "";
+        }
+        return numValue > 0
+          ? "text-red-600"
+          : numValue < 0
+            ? "text-green-600"
+            : "";
+      }
+
+      // 初始化所有日期
+      function initDates() {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setFullYear(startDate.getFullYear() - 1);
+
+        const formatDate = (d) => d.toISOString().split("T")[0];
+
+        // 权重优化日期
+        document.getElementById("start-date").value = formatDate(startDate);
+        document.getElementById("end-date").value = formatDate(endDate);
+
+        // 综合得分日期
+        document.getElementById("composite-start-date").value =
+          formatDate(startDate);
+        document.getElementById("composite-end-date").value =
+          formatDate(endDate);
+
+        // 方法对比日期
+        document.getElementById("compare-start-date").value =
+          formatDate(startDate);
+        document.getElementById("compare-end-date").value = formatDate(endDate);
+      }
+
+      // 加载综合得分因子
+      async function loadCompositeFactors() {
+        try {
+          const result = await api.getFactors();
+          if (result.success) {
+            const container = document.getElementById(
+              "composite-factors-checkboxes",
+            );
+            container.innerHTML = result.data
+              .map(
+                (factor) => `
+                        <label class="flex items-center gap-2 p-2 hover:bg-primary-50 rounded cursor-pointer">
+                            <input type="checkbox" name="factors" value="${factor.name}" class="w-4 h-4">
+                            <span class="text-sm">${factor.name}</span>
+                        </label>
+                    `,
+              )
+              .join("");
+          }
+        } catch (error) {
+          console.error("加载因子失败:", error);
+        }
+      }
+
+      // 加载方法对比因子
+      async function loadCompareFactors() {
+        try {
+          const result = await api.getFactors();
+          if (result.success) {
+            const container = document.getElementById(
+              "compare-factors-checkboxes",
+            );
+            container.innerHTML = result.data
+              .map(
+                (factor) => `
+                        <label class="flex items-center gap-2 p-2 hover:bg-primary-50 rounded cursor-pointer">
+                            <input type="checkbox" name="factors" value="${factor.name}" class="w-4 h-4">
+                            <span class="text-sm">${factor.name}</span>
+                        </label>
+                    `,
+              )
+              .join("");
+          }
+        } catch (error) {
+          console.error("加载因子失败:", error);
+        }
+      }
+
+      // 运行综合得分计算
+      async function runCompositeScore(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = collectFormData(form);
+
+        const selectedFactors = Array.from(
+          form.querySelectorAll('input[name="factors"]:checked'),
+        ).map((cb) => cb.value);
+
+        if (selectedFactors.length === 0) {
+          showToast("请至少选择一个因子", "warning");
+          return;
         }
 
-        // 运行方法对比
-        async function runMethodCompare(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = collectFormData(form);
+        const requestData = {
+          stock_code: formData.stock_code,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          factors: selectedFactors,
+        };
 
-            const selectedFactors = Array.from(form.querySelectorAll('input[name="factors"]:checked'))
-                .map(cb => cb.value);
+        try {
+          showLoading("计算中，请稍候...");
+          const result = await api.calculateCompositeScore(requestData);
 
-            if (selectedFactors.length === 0) {
-                showToast('请至少选择一个因子', 'warning');
-                return;
-            }
+          if (result.success) {
+            displayCompositeScore(result.data);
+            showToast("计算完成", "success");
+          }
+        } catch (error) {
+          console.error("计算失败:", error);
+          showToast("计算失败", "error");
+        } finally {
+          hideLoading();
+        }
+      }
 
-            const selectedMethods = Array.from(form.querySelectorAll('input[name="methods"]:checked'))
-                .map(cb => cb.value);
+      // 显示综合得分结果
+      function displayCompositeScore(data) {
+        document
+          .getElementById("composite-placeholder")
+          .classList.add("hidden");
+        document.getElementById("composite-result").classList.remove("hidden");
 
-            if (selectedMethods.length === 0) {
-                showToast('请至少选择一种对比方法', 'warning');
-                return;
-            }
+        const values = data.values || [];
+        const dates = data.dates || [];
 
-            const requestData = {
-                stock_code: formData.stock_code,
-                start_date: formData.start_date,
-                end_date: formData.end_date,
-                factors: selectedFactors,
-                methods: selectedMethods
-            };
+        // 计算统计指标
+        if (values.length > 0) {
+          const mean = values.reduce((a, b) => a + b, 0) / values.length;
+          const std = Math.sqrt(
+            values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) /
+              values.length,
+          );
+          const min = Math.min(...values);
+          const max = Math.max(...values);
 
-            try {
-                showLoading('对比中，请稍候...');
-                const result = await api.compareWeightMethods(requestData);
+          document.getElementById("composite-mean").textContent =
+            mean.toFixed(4);
+          document.getElementById("composite-std").textContent = std.toFixed(4);
+          document.getElementById("composite-min").textContent = min.toFixed(4);
+          document.getElementById("composite-max").textContent = max.toFixed(4);
 
-                if (result.success) {
-                    displayMethodCompare(result.data);
-                    showToast('对比完成', 'success');
-                }
-            } catch (error) {
-                console.error('对比失败:', error);
-                showToast('对比失败', 'error');
-            } finally {
-                hideLoading();
-            }
+          // 绘制图表
+          drawCompositeScoreChart(dates, values);
+          drawCompositeDistributionChart(values);
+        }
+      }
+
+      // 绘制综合得分时序图
+      function drawCompositeScoreChart(dates, values) {
+        const ctx = document
+          .getElementById("composite-score-chart")
+          .getContext("2d");
+
+        if (compositeScoreChart) {
+          compositeScoreChart.destroy();
         }
 
-        // 显示方法对比结果
-        function displayMethodCompare(data) {
-            document.getElementById('compare-placeholder').classList.add('hidden');
-            document.getElementById('compare-result').classList.remove('hidden');
+        // 采样显示，避免数据点过多
+        const maxPoints = 100;
+        let displayDates = dates;
+        let displayValues = values;
 
-            const results = data.results || {};
-            const methods = Object.keys(results);
+        if (values.length > maxPoints) {
+          const step = Math.ceil(values.length / maxPoints);
+          displayDates = dates.filter((_, i) => i % step === 0);
+          displayValues = values.filter((_, i) => i % step === 0);
+        }
 
-            // 更新表格
-            const tbody = document.getElementById('compare-table');
-            tbody.innerHTML = methods.map(method => {
-                const metrics = results[method];
-                const methodName = {
-                    'equal_weight': '等权重',
-                    'ic_weight': 'IC加权',
-                    'ir_weight': 'IR加权'
-                }[method] || method;
+        compositeScoreChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: displayDates,
+            datasets: [
+              {
+                label: "综合得分",
+                data: displayValues,
+                borderColor: ChartColors.primary,
+                backgroundColor: ChartColors.primaryBg,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: getNoLegendChartOptions({
+            scales: {
+              x: {
+                display: false, // 隐藏X轴标签避免拥挤
+              },
+              y: {
+                ticks: {
+                  font: {
+                    family: "'Fira Code', monospace",
+                  },
+                },
+              },
+            },
+          }),
+        });
+      }
 
-                return `
+      // 绘制综合得分分布直方图
+      function drawCompositeDistributionChart(values) {
+        const ctx = document
+          .getElementById("composite-distribution-chart")
+          .getContext("2d");
+
+        if (compositeDistributionChart) {
+          compositeDistributionChart.destroy();
+        }
+
+        // 创建分箱数据
+        const binCount = 30;
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const binWidth = (max - min) / binCount;
+
+        const bins = Array(binCount).fill(0);
+        const labels = [];
+
+        values.forEach((value) => {
+          const binIndex = Math.min(
+            Math.floor((value - min) / binWidth),
+            binCount - 1,
+          );
+          bins[binIndex]++;
+        });
+
+        // 创建标签
+        for (let i = 0; i < binCount; i++) {
+          const binStart = (min + i * binWidth).toFixed(2);
+          labels.push(binStart);
+        }
+
+        compositeDistributionChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "频次",
+                data: bins,
+                backgroundColor: ChartColors.blueBg.replace("0.1", "0.6"),
+                borderColor: ChartColors.blue,
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: getNoLegendChartOptions({
+            scales: {
+              x: {
+                display: false, // 隐藏X轴标签避免拥挤
+              },
+            },
+          }),
+        });
+      }
+
+      // 运行方法对比
+      async function runMethodCompare(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = collectFormData(form);
+
+        const selectedFactors = Array.from(
+          form.querySelectorAll('input[name="factors"]:checked'),
+        ).map((cb) => cb.value);
+
+        if (selectedFactors.length === 0) {
+          showToast("请至少选择一个因子", "warning");
+          return;
+        }
+
+        const selectedMethods = Array.from(
+          form.querySelectorAll('input[name="methods"]:checked'),
+        ).map((cb) => cb.value);
+
+        if (selectedMethods.length === 0) {
+          showToast("请至少选择一种对比方法", "warning");
+          return;
+        }
+
+        const requestData = {
+          stock_code: formData.stock_code,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          factors: selectedFactors,
+          methods: selectedMethods,
+        };
+
+        try {
+          showLoading("对比中，请稍候...");
+          const result = await api.compareWeightMethods(requestData);
+
+          if (result.success) {
+            displayMethodCompare(result.data);
+            showToast("对比完成", "success");
+          }
+        } catch (error) {
+          console.error("对比失败:", error);
+          showToast("对比失败", "error");
+        } finally {
+          hideLoading();
+        }
+      }
+
+      // 显示方法对比结果
+      function displayMethodCompare(data) {
+        document.getElementById("compare-placeholder").classList.add("hidden");
+        document.getElementById("compare-result").classList.remove("hidden");
+
+        const results = data.results || {};
+        const methods = Object.keys(results);
+
+        // 更新表格
+        const tbody = document.getElementById("compare-table");
+        tbody.innerHTML = methods
+          .map((method) => {
+            const metrics = results[method];
+            const methodName =
+              {
+                equal_weight: "等权重",
+                ic_weight: "IC加权",
+                ir_weight: "IR加权",
+              }[method] || method;
+
+            return `
                     <tr class="border-b border-slate-200">
                         <td class="py-3 px-4">${methodName}</td>
                         <td class="py-3 px-4 text-right font-mono ${getValueColor(metrics.annual_return)}">${formatPercent(metrics.annual_return)}</td>
                         <td class="py-3 px-4 text-right font-mono">${formatPercent(metrics.volatility)}</td>
-                        <td class="py-3 px-4 text-right font-mono">${metrics.sharpe_ratio?.toFixed(4) || '-'}</td>
+                        <td class="py-3 px-4 text-right font-mono">${metrics.sharpe_ratio?.toFixed(4) || "-"}</td>
                     </tr>
                 `;
-            }).join('');
+          })
+          .join("");
 
-            // 绘制对比图表
-            drawMethodCompareChart(methods, results);
+        // 绘制对比图表
+        drawMethodCompareChart(methods, results);
+        drawSharpeCompareChart(methods, results);
+      }
+
+      // 绘制方法对比图表（收益率和波动率）
+      function drawMethodCompareChart(methods, results) {
+        const ctx = document.getElementById("compare-chart").getContext("2d");
+
+        if (compareChart) {
+          compareChart.destroy();
         }
 
-        // 绘制方法对比图表
-        function drawMethodCompareChart(methods, results) {
-            const ctx = document.getElementById('compare-chart').getContext('2d');
+        const methodNames = methods.map((m) => {
+          return (
+            {
+              equal_weight: "等权重",
+              ic_weight: "IC加权",
+              ir_weight: "IR加权",
+              max_sharpe: "最大夏普",
+              min_variance: "最小方差",
+            }[m] || m
+          );
+        });
 
-            if (compareChart) {
-                compareChart.destroy();
-            }
+        const returns = methods.map(
+          (m) => (results[m].annual_return || 0) * 100,
+        );
+        const volatilities = methods.map(
+          (m) => (results[m].volatility || 0) * 100,
+        );
 
-            const methodNames = methods.map(m => {
-                return {
-                    'equal_weight': '等权重',
-                    'ic_weight': 'IC加权',
-                    'ir_weight': 'IR加权'
-                }[m] || m;
-            });
-
-            const returns = methods.map(m => (results[m].annual_return || 0) * 100);
-            const sharpeRatios = methods.map(m => results[m].sharpe_ratio || 0);
-
-            compareChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: methodNames,
-                    datasets: [
-                        {
-                            label: '年化收益率(%)',
-                            data: returns,
-                            backgroundColor: ChartColors.primaryBg.replace('0.1', '0.6'),
-                            borderColor: ChartColors.primary,
-                            borderWidth: 1
-                        },
-                        {
-                            label: '夏普比率',
-                            data: sharpeRatios,
-                            backgroundColor: ChartColors.positiveBg.replace('0.1', '0.6'),
-                            borderColor: ChartColors.positive,
-                            borderWidth: 1
-                        }
-                    ]
+        compareChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: methodNames,
+            datasets: [
+              {
+                label: "年化收益率(%)",
+                data: returns,
+                backgroundColor: ChartColors.primaryBg.replace("0.1", "0.6"),
+                borderColor: ChartColors.primary,
+                borderWidth: 2,
+              },
+              {
+                label: "波动率(%)",
+                data: volatilities,
+                backgroundColor: ChartColors.yellowBg.replace("0.1", "0.6"),
+                borderColor: ChartColors.yellow,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: getBarChartOptions({
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return `${context.dataset.label}: ${context.raw.toFixed(2)}%`;
+                  },
                 },
-                options: getBarChartOptions({
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                })
-            });
+              },
+            },
+            scales: {
+              y: {
+                ticks: {
+                  callback: (value) => value + "%",
+                  font: {
+                    family: "'Fira Code', monospace",
+                  },
+                },
+              },
+            },
+          }),
+        });
+      }
+
+      // 绘制夏普比率对比图
+      function drawSharpeCompareChart(methods, results) {
+        const ctx = document
+          .getElementById("sharpe-compare-chart")
+          .getContext("2d");
+
+        if (sharpeCompareChart) {
+          sharpeCompareChart.destroy();
         }
+
+        const methodNames = methods.map((m) => {
+          return (
+            {
+              equal_weight: "等权重",
+              ic_weight: "IC加权",
+              ir_weight: "IR加权",
+              max_sharpe: "最大夏普",
+              min_variance: "最小方差",
+            }[m] || m
+          );
+        });
+
+        const sharpeRatios = methods.map((m) => results[m].sharpe_ratio || 0);
+
+        // 根据夏普比率正负值设置颜色
+        const colors = sharpeRatios.map((sr) =>
+          sr >= 0 ? ChartColors.primary : ChartColors.positive,
+        );
+        const bgColors = sharpeRatios.map((sr) =>
+          sr >= 0
+            ? ChartColors.primaryBg.replace("0.1", "0.6")
+            : ChartColors.positiveBg.replace("0.1", "0.6"),
+        );
+
+        sharpeCompareChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: methodNames,
+            datasets: [
+              {
+                label: "夏普比率",
+                data: sharpeRatios,
+                backgroundColor: bgColors,
+                borderColor: colors,
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: getNoLegendChartOptions({
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return `夏普比率: ${context.raw.toFixed(4)}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  font: {
+                    family: "'Fira Code', monospace",
+                  },
+                },
+                title: {
+                  display: true,
+                  text: "夏普比率 (越高越好)",
+                  font: {
+                    family: "'Fira Sans', sans-serif",
+                    size: 12,
+                  },
+                },
+              },
+            },
+          }),
+        });
+      }
     </script>
-</body>
+  </body>
 </html>

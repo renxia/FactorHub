@@ -163,7 +163,8 @@
       "Bash(taskkill //F //PID 48052)",
       "Bash(taskkill //F //PID 10168)",
       "Bash(taskkill //F //PID 12084)",
-      "Bash(pip install ta-lib)"
+      "Bash(pip install ta-lib)",
+      "Bash(node --check frontend/web/portfolio-analysis.html)"
     ],
     "deny": [],
     "ask": []

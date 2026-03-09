@@ -157,7 +157,13 @@
       "Bash(curl -X POST \"http://localhost:8000/api/factors/validate\" -H \"Content-Type: application/json\" -d \"{\"\"code\"\": \"\"close > REF\\(close, 1\\)\"\"}\")",
       "Bash(curl -X POST \"http://localhost:8000/api/factors/validate\" -H \"Content-Type: application/json\" -d \"{\"\"code\"\": \"\"MA\\(close, 5\\) / MA\\(close, 20\\)\"\"}\")",
       "Bash(python -c \"import sys; sys.path.insert\\(0, ''.''\\); from backend.services.factor_service import factor_service; import pandas as pd; import numpy as np:*)",
-      "Bash(python -m backend.main --host 0.0.0.0 --port 8000)"
+      "Bash(python -m backend.main --host 0.0.0.0 --port 8000)",
+      "Bash(taskkill /F /PID 41852 /PID 48052 /PID 10168 /PID 12084)",
+      "Bash(taskkill //F //PID 41852)",
+      "Bash(taskkill //F //PID 48052)",
+      "Bash(taskkill //F //PID 10168)",
+      "Bash(taskkill //F //PID 12084)",
+      "Bash(pip install ta-lib)"
     ],
     "deny": [],
     "ask": []

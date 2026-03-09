@@ -276,8 +276,8 @@
 
                     // 生成复选框列表（与组合分析页面一致）
                     container.innerHTML = factors.map(factor => `
-                        <label class="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer hover:bg-primary-50">
-                            <input type="checkbox" name="base_factors" value="${factor.name}" class="w-4 h-4">
+                        <label class="flex items-center gap-2 p-2 bg-slate-50 rounded cursor-pointer hover:bg-primary-50" title="${factor.code}">
+                            <input type="checkbox" name="base_factors" value="${factor.code}" class="w-4 h-4">
                             <span class="text-sm">${factor.name}</span>
                         </label>
                     `).join('');

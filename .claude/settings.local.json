@@ -171,7 +171,8 @@
       "Bash(findstr \":8000.*LISTENING\")",
       "Bash(findstr \"42468\")",
       "Bash(uv pip list)",
-      "Bash(uv pip uninstall numba -y)"
+      "Bash(uv pip uninstall numba -y)",
+      "Bash(f:/pythonproject/FactorFlow/frontend/react-antd/PROJECT_SETUP.md:*)"
     ],
     "deny": [],
     "ask": []

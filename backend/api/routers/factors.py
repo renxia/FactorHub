@@ -279,8 +279,9 @@ async def validate_factor(request: dict):
 
         # 字符检查：确保只包含合法字符
         import re
-        # 允许：字母、数字、下划线、运算符、比较符、括号、空格等
-        if not re.match(r'^[a-zA-Z0-9_\+\-\*\/\(\)\.\s,\[\]:<>=!&|]+$', code):
+        # 允许更多合法字符，包括函数形式的因子代码中常见的字符
+        # 允许：字母、数字、下划线、运算符、比较符、括号、空格、引号、反斜杠、换行、制表符等
+        if not re.match(r'^[a-zA-Z0-9_\+\-\*\/\(\)\.\s,\[\]:<>=!&|\'"\\\n\t%;?]+$', code):
             return {
                 "success": False,
                 "message": "代码包含非法字符"

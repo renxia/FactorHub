@@ -95,9 +95,31 @@ export const api = {
     return request.get(`/factors/${id}`)
   },
 
-  // 因子分析
-  analyzeFactor(id: number, params: any) {
-    return request.post(`/factors/${id}/analyze`, params)
+  // IC分析
+  calculateIC(data: {
+    factor_name: string
+    stock_codes: string[]
+    start_date: string
+    end_date: string
+  }) {
+    return request.post('/analysis/ic', data)
+  },
+
+  // 因子值计算
+  calculateFactor(data: {
+    factor_name: string
+    stock_codes: string[]
+    start_date: string
+    end_date: string
+  }) {
+    return request.post('/analysis/calculate', data)
+  },
+
+  // 获取股票数据
+  getStockData(code: string, startDate: string, endDate: string) {
+    return request.get(`/data/stock/${code}`, {
+      params: { start_date: startDate, end_date: endDate }
+    })
   },
 
   // 组合分析
@@ -113,6 +135,16 @@ export const api = {
   // 获取回测结果
   getBacktestResult(taskId: string) {
     return request.get(`/backtesting/results/${taskId}`)
+  },
+
+  // 验证因子公式
+  validateFactor(data: any) {
+    return request.post('/factors/validate', data)
+  },
+
+  // 批量生成因子
+  batchGenerateFactors(data: any) {
+    return request.post('/factors/batch-generate', data)
   }
 }
 

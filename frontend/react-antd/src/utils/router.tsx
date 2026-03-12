@@ -3,6 +3,7 @@ import { lazy } from 'react'
 // 懒加载页面组件
 const Home = lazy(() => import('@/pages/Home'))
 const FactorManagement = lazy(() => import('@/pages/FactorManagement'))
+const FactorDetail = lazy(() => import('@/pages/FactorDetail'))
 const FactorMining = lazy(() => import('@/pages/FactorMining'))
 const PortfolioAnalysis = lazy(() => import('@/pages/PortfolioAnalysis'))
 const Backtesting = lazy(() => import('@/pages/Backtesting'))
@@ -22,6 +23,13 @@ export const routes = [
     label: '因子管理',
     icon: 'FileTextOutlined',
     component: FactorManagement
+  },
+  {
+    path: '/factor-detail',
+    key: 'factor-detail',
+    label: '因子详情',
+    component: FactorDetail,
+    hideInMenu: true
   },
   {
     path: '/factor-mining',

@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState, createElement } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Layout, Menu, Button, Drawer } from 'antd'
 import {
   DashboardOutlined,
@@ -16,6 +16,7 @@ const { Header, Content, Footer } = Layout
 
 function App() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
@@ -34,17 +35,19 @@ function App() {
   }
 
   // 菜单项配置
-  const menuItems = routes.map(route => ({
-    key: route.key,
-    icon: route.icon ? createElement(createIcon(route.icon)) : undefined,
-    label: route.label
-  }))
+  const menuItems = routes
+    .filter(route => !route.hideInMenu)
+    .map(route => ({
+      key: route.key,
+      icon: route.icon ? createElement(createIcon(route.icon)) : undefined,
+      label: route.label
+    }))
 
   const handleMenuClick = ({ key }: { key: string }) => {
     const route = routes.find(r => r.key === key)
     if (route) {
       setMobileMenuOpen(false)
-      window.location.href = route.path
+      navigate(route.path)
     }
   }
 
@@ -74,7 +77,7 @@ function App() {
             cursor: 'pointer',
             transition: 'all 0.3s ease'
           }}
-          onClick={() => (window.location.href = '/')}
+          onClick={() => navigate('/')}
         >
           <div
             style={{

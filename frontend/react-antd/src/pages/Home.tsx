@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Row, Col, Card, Badge, Button, Space } from 'antd'
 import {
   ArrowUpOutlined,
-  ThunderboltOutlined,
   RocketOutlined,
   FundOutlined,
   LineChartOutlined,
@@ -33,7 +32,7 @@ interface SystemHealth {
 }
 
 const Home: React.FC = () => {
-  const [lastUpdate, setLastUpdate] = useState(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
+  const [, setLastUpdate] = useState(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }))
   const [stats, setStats] = useState<Stats>({
     totalCount: 0,
     presetCount: 0,

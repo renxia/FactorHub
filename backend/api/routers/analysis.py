@@ -56,6 +56,10 @@ class MultiPeriodRequest(BaseModel):
 @router.post("/calculate")
 async def calculate_factor(request: CalculateRequest):
     """计算因子值"""
+    import logging
+    import traceback
+    logger = logging.getLogger(__name__)
+
     try:
         from backend.services.data_service import data_service
         from backend.services.factor_service import factor_service
@@ -71,83 +75,118 @@ async def calculate_factor(request: CalculateRequest):
         if not factor:
             raise HTTPException(status_code=404, detail=f"因子 '{request.factor_name}' 不存在")
 
+        logger.info(f"开始计算因子: {request.factor_name}, 代码: {factor.code}")
+
         # 获取数据并计算因子
         result_data = {}
+        errors = []
+
         for stock_code in request.stock_codes:
-            data = data_service.get_stock_data(
-                stock_code,
-                request.start_date,
-                request.end_date
-            )
-            if data is not None and len(data) > 0:
+            try:
+                logger.info(f"获取股票数据: {stock_code}, 时间范围: {request.start_date} - {request.end_date}")
+                data = data_service.get_stock_data(
+                    stock_code,
+                    request.start_date,
+                    request.end_date
+                )
+
+                if data is None or len(data) == 0:
+                    logger.warning(f"股票 {stock_code} 未获取到数据")
+                    errors.append(f"股票 {stock_code} 未获取到数据")
+                    continue
+
+                logger.info(f"股票 {stock_code} 获取到 {len(data)} 条数据")
+
                 # 使用 calculator 计算因子
+                logger.info(f"开始计算因子值，因子代码: {factor.code}")
                 factor_series = factor_service.calculator.calculate(data, factor.code)
-                if factor_series is not None:
-                    # 将因子值添加到数据中
-                    data[request.factor_name] = factor_series
 
-                    # 过滤掉因子值为 NaN 的行，确保 dates 和 factor_values 一一对应
-                    valid_data = data[[request.factor_name]].dropna()
-                    valid_dates = valid_data.index.strftime('%Y-%m-%d').tolist()
-                    valid_factor_values = valid_data[request.factor_name].tolist()
+                if factor_series is None:
+                    logger.warning(f"股票 {stock_code} 因子计算返回 None")
+                    errors.append(f"股票 {stock_code} 因子计算失败")
+                    continue
 
-                    # 额外检查：确保所有值都是有效的数字，转换 NaN 为 None
-                    valid_factor_values = [None if (isinstance(v, float) and (v != v)) else v for v in valid_factor_values]
+                logger.info(f"因子计算完成，有效值数量: {factor_series.notna().sum()}/{len(factor_series)}")
 
-                    # 移除值为 None 的项
-                    filtered_dates = []
-                    filtered_values = []
-                    for d, v in zip(valid_dates, valid_factor_values):
-                        if v is not None:
-                            filtered_dates.append(d)
-                            filtered_values.append(v)
+                # 将因子值添加到数据中
+                data[request.factor_name] = factor_series
 
-                    valid_dates = filtered_dates
-                    valid_factor_values = filtered_values
+                # 过滤掉因子值为 NaN 的行，确保 dates 和 factor_values 一一对应
+                valid_data = data[[request.factor_name]].dropna()
+                valid_dates = valid_data.index.strftime('%Y-%m-%d').tolist()
+                valid_factor_values = valid_data[request.factor_name].tolist()
 
-                    # 调试日志
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.info(f"股票 {stock_code}: 原始数据范围 {data.index[0]} 到 {data.index[-1]}, 共 {len(data)} 行")
-                    logger.info(f"因子 {request.factor_name}: 有效数据范围 {valid_dates[0] if valid_dates else '无'} 到 {valid_dates[-1] if valid_dates else '无'}, 共 {len(valid_dates)} 行")
-                    logger.info(f"因子非NaN值数量: {factor_series.notna().sum()}/{len(factor_series)}")
-                    logger.info(f"返回的因子值数组长度: {len(valid_factor_values)}, 最后5个值: {valid_factor_values[-5:] if len(valid_factor_values) >= 5 else valid_factor_values}")
+                # 额外检查：确保所有值都是有效的数字，转换 NaN 为 None
+                valid_factor_values = [None if (isinstance(v, float) and (v != v)) else v for v in valid_factor_values]
 
-                    # 验证数据完整性
-                    if len(valid_dates) != len(valid_factor_values):
-                        logger.error(f"数据长度不一致! dates={len(valid_dates)}, values={len(valid_factor_values)}")
-                        raise ValueError(f"数据长度不一致: dates={len(valid_dates)}, values={len(valid_factor_values)}")
+                # 移除值为 None 的项
+                filtered_dates = []
+                filtered_values = []
+                for d, v in zip(valid_dates, valid_factor_values):
+                    if v is not None:
+                        filtered_dates.append(d)
+                        filtered_values.append(v)
 
-                    # 转换为字典格式返回
-                    result_data[stock_code] = {
-                        "dates": valid_dates,
-                        "factor_values": valid_factor_values,
-                        "statistics": {
-                            "mean": float(factor_series.mean()),
-                            "std": float(factor_series.std()),
-                            "min": float(factor_series.min()),
-                            "max": float(factor_series.max()),
-                            "count": int(factor_series.count())
-                        }
+                valid_dates = filtered_dates
+                valid_factor_values = filtered_values
+
+                logger.info(f"股票 {stock_code}: 有效数据范围 {valid_dates[0] if valid_dates else '无'} 到 {valid_dates[-1] if valid_dates else '无'}, 共 {len(valid_dates)} 行")
+
+                # 验证数据完整性
+                if len(valid_dates) != len(valid_factor_values):
+                    logger.error(f"数据长度不一致! dates={len(valid_dates)}, values={len(valid_factor_values)}")
+                    errors.append(f"股票 {stock_code} 数据长度不一致")
+                    continue
+
+                # 转换为字典格式返回
+                result_data[stock_code] = {
+                    "dates": valid_dates,
+                    "factor_values": valid_factor_values,
+                    "statistics": {
+                        "mean": float(factor_series.mean()) if len(factor_series) > 0 else 0,
+                        "std": float(factor_series.std()) if len(factor_series) > 0 else 0,
+                        "min": float(factor_series.min()) if len(factor_series) > 0 else 0,
+                        "max": float(factor_series.max()) if len(factor_series) > 0 else 0,
+                        "count": int(factor_series.count())
                     }
+                }
+                logger.info(f"股票 {stock_code} 因子计算成功")
+
+            except Exception as e:
+                logger.error(f"股票 {stock_code} 因子计算失败: {str(e)}\n{traceback.format_exc()}")
+                errors.append(f"股票 {stock_code} 计算失败: {str(e)}")
+                continue
 
         if not result_data:
-            raise HTTPException(status_code=500, detail="因子计算失败或无有效数据")
+            error_msg = f"因子计算失败或无有效数据。详情: {'; '.join(errors) if errors else '未知错误'}"
+            logger.error(error_msg)
+            raise HTTPException(status_code=500, detail=error_msg)
+
+        if errors:
+            logger.warning(f"因子计算完成，但有部分错误: {'; '.join(errors)}")
 
         return {
             "success": True,
-            "data": result_data
+            "data": result_data,
+            "warnings": errors if errors else None
         }
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"因子计算异常: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"因子计算失败: {str(e)}")
 
 
 @router.post("/ic")
 async def calculate_ic(request: ICAnalysisRequest):
     """计算IC/IR"""
+    import logging
+    import traceback
+    logger = logging.getLogger(__name__)
+
     try:
+        logger.info(f"开始IC分析: {request.factor_name}, 股票: {request.stock_codes}, 时间: {request.start_date} - {request.end_date}")
+
         # 调用分析服务的 analyze 方法
         result = analysis_service.analyze(
             stock_codes=request.stock_codes,
@@ -158,18 +197,35 @@ async def calculate_ic(request: ICAnalysisRequest):
             rolling_window=252
         )
 
+        logger.info(f"IC分析原始结果: {result}")
+
         # 提取 IC/IR 相关数据并简化返回格式
+        ic_ir_data = result.get("ic_ir", {})
+        ic_stats = ic_ir_data.get("ic_stats", {})
+
+        logger.info(f"提取的ic_stats: {ic_stats}")
+
         simplified_result = {
             "metadata": result.get("metadata", {}),
-            "ic_stats": result.get("ic_ir", {}).get("ic_stats", {}),
+            "ic_stats": ic_stats,
         }
+
+        # 检查是否有有效数据
+        if not ic_stats or len(ic_stats) == 0:
+            logger.warning("IC分析未返回有效统计数据")
+            return {
+                "success": True,
+                "data": simplified_result,
+                "message": "IC分析未返回有效统计数据，可能原因：股票数据不足或因子计算失败"
+            }
 
         return {
             "success": True,
             "data": simplified_result
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"IC分析失败: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"IC分析失败: {str(e)}")
 
 
 @router.post("/stability")

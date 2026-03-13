@@ -8,7 +8,6 @@ import {
   Button,
   Select,
   InputNumber,
-  Checkbox,
   Progress,
   Row,
   Col,
@@ -86,7 +85,6 @@ const FactorMining: React.FC = () => {
   const [factors, setFactors] = useState<Factor[]>([])
   const [loading, setLoading] = useState(false)
   const [mining, setMining] = useState(false)
-  const [taskId, setTaskId] = useState<string | null>(null)
   const [currentStockCode, setCurrentStockCode] = useState<string>('')
 
   const [miningStatus, setMiningStatus] = useState<MiningStatus | null>(null)
@@ -141,10 +139,6 @@ const FactorMining: React.FC = () => {
   // 开始挖掘
   const startMining = async (values: any) => {
     const selectedFactors = values.base_factors || []
-    if (selectedFactors.length === 0) {
-      message.warning('请至少选择一个基础因子')
-      return
-    }
 
     // 保存当前股票代码，用于后续命名
     const stockCode = values.stock_code.replace('.', '') // 移除股票代码中的点
@@ -174,7 +168,6 @@ const FactorMining: React.FC = () => {
 
       if (response.success) {
         const newTaskId = response.data.task_id
-        setTaskId(newTaskId)
 
         // 轮询获取进度
         window.miningInterval = setInterval(() => {
@@ -595,14 +588,15 @@ const FactorMining: React.FC = () => {
                 onFinish={startMining}
               >
                 {/* 基础配置 */}
-                <Divider orientation="left">基础配置</Divider>
+                <Divider orientationMargin={0} orientation="left">基础配置</Divider>
 
                 <Form.Item
                   label="股票代码"
                   name="stock_code"
+                  initialValue="000001"
                   rules={[{ required: true, message: '请输入股票代码' }]}
                 >
-                  <Input placeholder="例如：000001.SZ" />
+                  <Input placeholder="例如：000001、600000" />
                 </Form.Item>
 
                 <Form.Item
@@ -614,23 +608,93 @@ const FactorMining: React.FC = () => {
                 </Form.Item>
 
                 {/* 基础因子选择 */}
-                <Divider orientation="left">基础因子选择</Divider>
-                <p className="text-hint">选择作为遗传算法输入的基础因子</p>
+                <Divider orientationMargin={0} orientation="left">基础因子选择</Divider>
+                <p className="text-hint">选择作为遗传算法输入的基础因子（可搜索因子名称）</p>
 
-                <Form.Item name="base_factors">
-                  <Checkbox.Group style={{ width: '100%' }}>
-                    <div className="factors-checkbox-list">
-                      {factors.map(factor => (
-                        <Checkbox key={factor.id} value={factor.name} style={{ marginBottom: 8 }}>
-                          <span title={factor.code}>{factor.name}</span>
-                        </Checkbox>
-                      ))}
-                    </div>
-                  </Checkbox.Group>
+                <Form.Item
+                  name="base_factors"
+                  rules={[{ required: true, message: '请至少选择一个基础因子' }]}
+                >
+                  <Select
+                    mode="multiple"
+                    placeholder="输入因子名称搜索，如：RSI、MACD、SMA"
+                    style={{ width: '100%' }}
+                    showSearch
+                    filterOption={(input, option) => {
+                      const label = String(option?.label ?? '')
+                      const value = String(option?.value ?? '')
+                      return label.toLowerCase().includes(input.toLowerCase()) ||
+                             value.toLowerCase().includes(input.toLowerCase())
+                    }}
+                    optionLabelProp="label"
+                    maxTagCount="responsive"
+                    size="large"
+                    popupClassName="factor-select-dropdown"
+                    listHeight={400}
+                  >
+                    {factors.map(factor => (
+                      <Option
+                        key={factor.id}
+                        value={factor.name}
+                        label={factor.name}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontWeight: 500 }}>{factor.name}</span>
+                            <Tag color={factor.source === 'preset' ? 'success' : 'warning'}>
+                              {factor.source === 'preset' ? '预置' : '自定义'}
+                            </Tag>
+                            <Tag color="blue">{factor.category}</Tag>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>
+                            {factor.code}
+                          </div>
+                          {factor.description && (
+                            <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                              {factor.description}
+                            </div>
+                          )}
+                        </div>
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+
+                <Form.Item noStyle shouldUpdate>
+                  {() => {
+                    const selectedCount = form.getFieldValue('base_factors')?.length || 0
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <span className="text-hint">
+                          已选择 <strong style={{ color: '#3b82f6' }}>{selectedCount}</strong> 个因子
+                        </span>
+                        <Space size="small">
+                          <Button
+                            type="link"
+                            size="small"
+                            onClick={() => {
+                              form.setFieldsValue({ base_factors: factors.map(f => f.name) })
+                            }}
+                          >
+                            全选
+                          </Button>
+                          <Button
+                            type="link"
+                            size="small"
+                            onClick={() => {
+                              form.setFieldsValue({ base_factors: [] })
+                            }}
+                          >
+                            清空
+                          </Button>
+                        </Space>
+                      </div>
+                    )
+                  }}
                 </Form.Item>
 
                 {/* 算法参数 */}
-                <Divider orientation="left">算法参数</Divider>
+                <Divider orientationMargin={0} orientation="left">算法参数</Divider>
 
                 <Row gutter={16}>
                   <Col span={12}>
@@ -681,7 +745,7 @@ const FactorMining: React.FC = () => {
                 </Form.Item>
 
                 {/* 适应度函数 */}
-                <Divider orientation="left">适应度函数</Divider>
+                <Divider orientationMargin={0} orientation="left">适应度函数</Divider>
 
                 <Form.Item
                   label="优化目标"
@@ -695,12 +759,42 @@ const FactorMining: React.FC = () => {
                   </Select>
                 </Form.Item>
 
-                <Form.Item
-                  label="IC阈值"
-                  name="ic_threshold"
-                  tooltip="因子筛选的IC阈值"
-                >
-                  <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+                <Form.Item noStyle shouldUpdate>
+                  {() => {
+                    const objective = form.getFieldValue('fitness_objective') || 'ic_mean'
+
+                    let thresholdLabel = '阈值'
+                    let thresholdPlaceholder = '0.03'
+
+                    if (objective === 'ic_mean') {
+                      thresholdLabel = 'IC阈值'
+                      thresholdPlaceholder = '例如：0.03'
+                    } else if (objective === 'ir_ratio') {
+                      thresholdLabel = 'IR阈值'
+                      thresholdPlaceholder = '例如：0.5'
+                    } else if (objective === 'sharpe') {
+                      thresholdLabel = '夏普阈值'
+                      thresholdPlaceholder = '例如：1.0'
+                    } else if (objective === 'combined') {
+                      thresholdLabel = '综合阈值'
+                      thresholdPlaceholder = '例如：0.5'
+                    }
+
+                    return (
+                      <Form.Item
+                        label={thresholdLabel}
+                        name="ic_threshold"
+                        tooltip={`筛选因子的${thresholdLabel}`}
+                      >
+                        <InputNumber
+                          min={0}
+                          step={0.01}
+                          style={{ width: '100%' }}
+                          placeholder={thresholdPlaceholder}
+                        />
+                      </Form.Item>
+                    )
+                  }}
                 </Form.Item>
 
                 <Form.Item>

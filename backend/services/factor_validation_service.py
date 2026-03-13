@@ -162,10 +162,35 @@ class FactorValidationService:
                 "message": "数据量不足",
             }
 
-        # 计算滚动IC
-        rolling_ic = aligned_data["factor"].rolling(
-            window=20, min_periods=10
-        ).corr(aligned_data["return"])
+        # 计算滚动IC - 使用正确的两变量滚动相关系数计算方法
+        window = 20
+        min_periods = 10
+
+        # 方法：在滚动窗口内计算两个序列的相关系数
+        rolling_ic_values = []
+
+        for i in range(len(aligned_data)):
+            # 确保有足够的历史数据
+            start_idx = max(0, i - window + 1)
+            end_idx = i + 1
+
+            window_factor = aligned_data["factor"].iloc[start_idx:end_idx]
+            window_return = aligned_data["return"].iloc[start_idx:end_idx]
+
+            # 检查有效数据点数量
+            valid_data = pd.DataFrame({
+                "factor": window_factor,
+                "return": window_return
+            }).dropna()
+
+            if len(valid_data) >= min_periods:
+                ic = valid_data["factor"].corr(valid_data["return"])
+                if not pd.isna(ic):
+                    rolling_ic_values.append(ic)
+            else:
+                rolling_ic_values.append(np.nan)
+
+        rolling_ic = pd.Series(rolling_ic_values, index=aligned_data.index)
 
         # 计算IR（IC均值 / IC标准差）
         ic_mean = rolling_ic.mean()

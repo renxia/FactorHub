@@ -190,12 +190,24 @@ async def run_single_backtest(request: SingleBacktestRequest):
 
         # 清理结果中的NaN和inf值，确保JSON可序列化
         def clean_value(v):
+            """清理值：处理NaN、Inf和超大数值"""
             if isinstance(v, float):
                 if np.isnan(v) or np.isinf(v):
-                    return 0.0
+                    return None  # 使用None而不是0.0，更明确表示缺失值
+                # 检查是否超出JSON可表示的范围
+                if abs(v) > 1e308:  # JSON float最大值约为1.8e308
+                    return None
+            elif isinstance(v, (np.floating, np.float32, np.float64)):
+                # 处理numpy float类型
+                if np.isnan(v) or np.isinf(v):
+                    return None
+                if abs(v) > 1e308:
+                    return None
+                return float(v)
             return v
 
         def clean_dict(d):
+            """递归清理字典、列表中的值"""
             if isinstance(d, dict):
                 return {k: clean_dict(v) for k, v in d.items()}
             elif isinstance(d, list):
@@ -215,6 +227,18 @@ async def run_single_backtest(request: SingleBacktestRequest):
                     df = df.set_index("date")
                 df.index = pd.to_datetime(df.index)
 
+            # 清理因子数据中的NaN和Inf值
+            def clean_factor_values(series):
+                """清理因子值：将NaN和Inf替换为None"""
+                cleaned = []
+                for val in series:
+                    # 使用numpy的isinf函数检查无穷大值
+                    if pd.isna(val) or np.isinf(val):
+                        cleaned.append(None)
+                    else:
+                        cleaned.append(float(val))
+                return cleaned
+
             # K线数据
             stock_chart_data = {
                 "kline": {
@@ -226,8 +250,16 @@ async def run_single_backtest(request: SingleBacktestRequest):
                 },
                 "factor": {
                     "dates": df.index.strftime('%Y-%m-%d').tolist(),
-                    "name": primary_factor_name if request.strategy_type == "single_factor" else f"{len(factor_names_to_use)}个因子组合",
-                    "values": df[primary_factor_name].tolist()
+                    # 单因子模式：保持原有格式（向后兼容）
+                    # 多因子模式：返回所有因子数据
+                    "factors": [
+                        {
+                            "name": factor_name,
+                            "values": clean_factor_values(df[factor_name])
+                        }
+                        for factor_name in factor_names_to_use
+                        if factor_name in df.columns
+                    ]
                 }
             }
 
@@ -254,12 +286,19 @@ async def run_single_backtest(request: SingleBacktestRequest):
             actual_sell_dates = []
             actual_sell_prices = []
 
-            if result_serializable.get("trades") and is_single_stock:
+            if result_serializable.get("trades"):
                 trades_df = result["trades"]
                 if trades_df is not None and len(trades_df) > 0:
+                    # 在多股票模式下，只提取当前股票的交易记录
+                    stock_trades_df = trades_df
+
+                    # 如果有'股票代码'列，筛选出当前股票的交易
+                    if '股票代码' in trades_df.columns:
+                        stock_trades_df = trades_df[trades_df['股票代码'] == stock_code]
+
                     # trades_df的索引是入场时间（DatetimeIndex，name='入场时间'）
                     # 直接遍历索引和行
-                    for entry_time, row in trades_df.iterrows():
+                    for entry_time, row in stock_trades_df.iterrows():
                         # entry_time 是买入日期（Timestamp）
                         if pd.notna(entry_time):
                             buy_date = pd.Timestamp(entry_time).strftime('%Y-%m-%d')
@@ -463,12 +502,24 @@ async def run_strategy_comparison(request: ComparisonRequest):
 
         # 清理结果中的NaN和inf值，确保JSON可序列化
         def clean_value(v):
+            """清理值：处理NaN、Inf和超大数值"""
             if isinstance(v, float):
                 if np.isnan(v) or np.isinf(v):
-                    return 0.0
+                    return None  # 使用None而不是0.0，更明确表示缺失值
+                # 检查是否超出JSON可表示的范围
+                if abs(v) > 1e308:  # JSON float最大值约为1.8e308
+                    return None
+            elif isinstance(v, (np.floating, np.float32, np.float64)):
+                # 处理numpy float类型
+                if np.isnan(v) or np.isinf(v):
+                    return None
+                if abs(v) > 1e308:
+                    return None
+                return float(v)
             return v
 
         def clean_dict(d):
+            """递归清理字典、列表中的值"""
             if isinstance(d, dict):
                 return {k: clean_dict(v) for k, v in d.items()}
             elif isinstance(d, list):

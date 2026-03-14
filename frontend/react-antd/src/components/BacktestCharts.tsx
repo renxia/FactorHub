@@ -11,10 +11,18 @@ interface ChartData {
   close: number[]
 }
 
-interface FactorData {
-  dates: string[]
+interface SingleFactor {
   name: string
   values: number[]
+}
+
+interface FactorData {
+  dates: string[]
+  // 新格式：多因子
+  factors?: SingleFactor[]
+  // 旧格式：单因子（向后兼容）
+  name?: string
+  values?: number[]
 }
 
 interface SignalTypeData {
@@ -103,6 +111,55 @@ const BacktestCharts: React.FC<BacktestChartsProps> = ({ data, loading = false }
       }
     }
 
+    // 处理因子数据：支持新旧两种格式
+    let factorsList: SingleFactor[] = []
+    if (factor.factors && factor.factors.length > 0) {
+      // 新格式：多因子
+      factorsList = factor.factors
+    } else if (factor.name && factor.values) {
+      // 旧格式：单因子（向后兼容）
+      factorsList = [{ name: factor.name, values: factor.values }]
+    }
+
+    // 归一化因子数据（除以第一个值）
+    const normalizedFactors = factorsList.map(factor => {
+      // 找到第一个有效且非零的值作为基准
+      const firstValidValue = factor.values.find(v =>
+        v !== null &&
+        v !== undefined &&
+        !isNaN(v) &&
+        v !== 0
+      )
+
+      if (firstValidValue !== undefined) {
+        return {
+          name: factor.name,
+          values: factor.values.map(v => {
+            // 只对有效值进行归一化
+            if (v !== null && v !== undefined && !isNaN(v)) {
+              return v / firstValidValue
+            }
+            return null
+          })
+        }
+      }
+
+      // 如果找不到合适的基准值，返回原始数据
+      return { name: factor.name, values: factor.values }
+    })
+
+    // 为每个因子分配颜色
+    const factorColors = [
+      '#3b82f6', // 蓝色
+      '#10b981', // 绿色
+      '#f59e0b', // 橙色
+      '#ef4444', // 红色
+      '#8b5cf6', // 紫色
+      '#06b6d4', // 青色
+      '#ec4899', // 粉色
+      '#84cc16', // 黄绿色
+    ]
+
     // 根据选择的信号类型获取对应的信号数据
     const displaySignals = signalDisplayType === 'actual' ? normalizedSignals.actual : normalizedSignals.strategy
 
@@ -121,6 +178,18 @@ const BacktestCharts: React.FC<BacktestChartsProps> = ({ data, loading = false }
 
     const option = {
       animation: false,
+      legend: {
+        show: normalizedFactors.length > 1,
+        data: normalizedFactors.map(f => f.name),
+        top: 0,
+        left: 'center',
+        itemWidth: 20,
+        itemHeight: 10,
+        textStyle: {
+          fontSize: 11,
+          color: '#64748b'
+        }
+      },
       tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -167,10 +236,11 @@ const BacktestCharts: React.FC<BacktestChartsProps> = ({ data, loading = false }
         }
       },
       grid: [
-        { left: '8%', right: '8%', top: '6%', height: '24%' },
-        { left: '8%', right: '8%', top: '32%', height: '18%' },
-        { left: '8%', right: '8%', top: '52%', height: '18%' },
-        { left: '8%', right: '8%', top: '72%', height: '18%' }
+        // 多因子时需要更多顶部空间给图例
+        { left: '8%', right: '8%', top: normalizedFactors.length > 1 ? '10%' : '6%', height: '24%' },
+        { left: '8%', right: '8%', top: normalizedFactors.length > 1 ? '36%' : '32%', height: '18%' },
+        { left: '8%', right: '8%', top: normalizedFactors.length > 1 ? '56%' : '52%', height: '18%' },
+        { left: '8%', right: '8%', top: normalizedFactors.length > 1 ? '76%' : '72%', height: '18%' }
       ],
       xAxis: [
         {
@@ -482,18 +552,18 @@ const BacktestCharts: React.FC<BacktestChartsProps> = ({ data, loading = false }
             borderWidth: 1
           }
         },
-        // 2. 因子图
-        {
-          name: '因子',
+        // 2. 因子图（支持多因子）
+        ...normalizedFactors.map((factor, index) => ({
+          name: factor.name,
           type: 'line',
           xAxisIndex: 1,
           yAxisIndex: 1,
           data: factor.values,
           smooth: true,
           showSymbol: false,
-          itemStyle: { color: '#3b82f6' },
+          itemStyle: { color: factorColors[index % factorColors.length] },
           lineStyle: { width: 2 },
-          areaStyle: {
+          areaStyle: index === 0 ? {
             color: {
               type: 'linear',
               x: 0,
@@ -501,12 +571,12 @@ const BacktestCharts: React.FC<BacktestChartsProps> = ({ data, loading = false }
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
-                { offset: 1, color: 'rgba(59, 130, 246, 0.05)' }
+                { offset: 0, color: `rgba(59, 130, 246, 0.3)` },
+                { offset: 1, color: `rgba(59, 130, 246, 0.05)` }
               ]
             }
-          }
-        },
+          } : undefined
+        })),
         // 3. 净值曲线
         {
           name: '净值',

@@ -203,7 +203,19 @@
       "Bash(uv run python scripts/clear_analysis_cache.py)",
       "Bash(uv run python scripts/test_method_comparison.py)",
       "Bash(uv run python scripts/test_compare_methods_fixed.py)",
-      "Bash(uv run python scripts/test_compare_methods_direct.py)"
+      "Bash(uv run python scripts/test_compare_methods_direct.py)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm build)",
+      "Bash(uv run python scripts/test_slippage_commission.py)",
+      "Bash(uv run python scripts/test_vectorbt_position_behavior.py)",
+      "Bash(uv run python scripts/test_position_only_once.py)",
+      "Bash(uv run python scripts/diagnose_annual_return.py)",
+      "Bash(uv run python scripts/test_backtest_comprehensive.py)",
+      "Bash(uv run python scripts/test_backtest_real_data.py)",
+      "Bash(uv run python scripts/debug_trades_format.py)",
+      "Bash(uv run python scripts/test_actual_signals.py)",
+      "Bash(npx tsc --noEmit --skipLibCheck)",
+      "Bash(pnpm type-check)"
     ],
     "deny": [],
     "ask": []

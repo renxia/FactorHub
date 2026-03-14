@@ -40,6 +40,7 @@ class VectorBTBacktestService:
         percentile: int = 50,
         direction: str = "long",
         n_quantiles: int = 5,
+        shares_per_trade: int = 100,  # 添加每次交易手数参数，默认1手（100股）
     ) -> Dict:
         """
         单因子分层回测（使用vectorbt）
@@ -87,6 +88,7 @@ class VectorBTBacktestService:
 
         # 5. 创建回测结果（使用vectorbt的信号回测）
         # 创建Portfolio对象，设置手续费和滑点
+        # 使用固定手数交易（每次交易shares_per_trade股）
         pf = vbt.Portfolio.from_signals(
             close=df["close"],
             entries=entries,
@@ -96,6 +98,7 @@ class VectorBTBacktestService:
             cash_sharing=False,  # 不共享现金
             fees=self.commission_rate,  # 手续费率
             slippage=self.slippage,  # 滑点率
+            size=shares_per_trade,  # 每次交易的数量（股）
         )
 
         # 获取净值、收益和性能指标
@@ -109,7 +112,16 @@ class VectorBTBacktestService:
         # 从 stats Series 中提取指标
         # VectorBT 返回的百分比值需要除以100转换为小数
         total_return = stats.get('Total Return [%]', 0) / 100.0
+
+        # 年化收益率：如果VectorBT返回0或NaN，则手动计算
         annual_return = stats.get('Annual Return [%]', 0) / 100.0
+        if annual_return == 0 or np.isnan(annual_return):
+            # 手动计算年化收益率 = (1 + 总收益率)^(252/交易天数) - 1
+            n_days = len(returns_clean)
+            if n_days > 0:
+                annual_return = (1 + total_return) ** (252 / n_days) - 1
+            else:
+                annual_return = 0.0
 
         volatility = self._calculate_volatility(returns_clean, stats)
 
@@ -252,6 +264,7 @@ class VectorBTBacktestService:
         percentile: int = 50,
         direction: str = "long",
         n_quantiles: int = 5,
+        shares_per_trade: int = 100,
     ) -> Dict:
         """
         多因子组合回测（使用vectorbt）
@@ -340,6 +353,7 @@ class VectorBTBacktestService:
             percentile=percentile,
             direction=direction,
             n_quantiles=n_quantiles,
+            shares_per_trade=shares_per_trade,
         )
 
     def cross_sectional_backtest(
@@ -425,7 +439,16 @@ class VectorBTBacktestService:
         # 从 stats Series 中提取指标
         # VectorBT 返回的百分比值需要除以100转换为小数
         total_return = stats.get('Total Return [%]', 0) / 100.0
+
+        # 年化收益率：如果VectorBT返回0或NaN，则手动计算
         annual_return = stats.get('Annual Return [%]', 0) / 100.0
+        if annual_return == 0 or np.isnan(annual_return):
+            # 手动计算年化收益率 = (1 + 总收益率)^(252/交易天数) - 1
+            n_days = len(returns_clean)
+            if n_days > 0:
+                annual_return = (1 + total_return) ** (252 / n_days) - 1
+            else:
+                annual_return = 0.0
 
         volatility = self._calculate_volatility(returns_clean, stats)
 

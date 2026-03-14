@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 import sys
+import numpy as np
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -23,7 +24,8 @@ class SingleBacktestRequest(BaseModel):
     """单策略回测请求"""
     data_mode: str = "single"  # single 或 pool
     stock_codes: List[str]
-    factor_name: str
+    factor_name: Optional[str] = None  # 单因子时的因子名称
+    factor_names: Optional[List[str]] = None  # 多因子时的因子列表
     strategy_type: str = "single_factor"  # single_factor 或 multi_factor
     start_date: str
     end_date: str
@@ -34,6 +36,7 @@ class SingleBacktestRequest(BaseModel):
     direction: str = "long"
     n_quantiles: int = 5
     weight_method: str = "equal_weight"  # 多因子时的权重方法
+    shares_per_trade: int = 100  # 每次交易手数，默认1手（100股）
 
 
 class ComparisonRequest(BaseModel):
@@ -66,16 +69,33 @@ async def run_single_backtest(request: SingleBacktestRequest):
         from backend.core.database import get_db_session
         import pandas as pd
 
-        # 从数据库获取因子定义
+        # 确定要使用的因子列表
+        if request.strategy_type == "multi_factor":
+            # 多因子策略
+            factor_names_to_use = request.factor_names or []
+            if not factor_names_to_use:
+                raise HTTPException(status_code=400, detail="多因子策略需要选择至少一个因子")
+            primary_factor_name = factor_names_to_use[0]  # 使用第一个因子作为主因子
+        else:
+            # 单因子策略
+            factor_names_to_use = [request.factor_name] if request.factor_name else []
+            primary_factor_name = request.factor_name
+            if not primary_factor_name:
+                raise HTTPException(status_code=400, detail="请选择因子")
+
+        # 从数据库获取所有因子定义
         db = get_db_session()
         repo = FactorRepository(db)
-        factor_def = repo.get_by_name(request.factor_name)
+        factor_defs = {}
+        for factor_name in factor_names_to_use:
+            factor_def = repo.get_by_name(factor_name)
+            if not factor_def:
+                db.close()
+                raise HTTPException(status_code=404, detail=f"因子 '{factor_name}' 不存在")
+            factor_defs[factor_name] = factor_def
         db.close()
 
-        if not factor_def:
-            raise HTTPException(status_code=404, detail=f"因子 '{request.factor_name}' 不存在")
-
-        # 获取数据
+        # 获取数据并计算所有因子
         all_factor_data = {}
         for stock_code in request.stock_codes:
             stock_data = data_service.get_stock_data(
@@ -85,12 +105,15 @@ async def run_single_backtest(request: SingleBacktestRequest):
             )
 
             if stock_data is not None and len(stock_data) > 0:
-                # 计算因子（使用因子的代码）
+                # 计算所有选中的因子
                 factor_calculator = factor_service.calculator
-                factor_values = factor_calculator.calculate(
-                    stock_data, factor_def.code  # 使用 factor_def.code 而不是 request.factor_name
-                )
-                stock_data[request.factor_name] = factor_values
+                for factor_name in factor_names_to_use:
+                    factor_def = factor_defs[factor_name]
+                    factor_values = factor_calculator.calculate(
+                        stock_data, factor_def.code
+                    )
+                    stock_data[factor_name] = factor_values
+
                 all_factor_data[stock_code] = stock_data
 
         if not all_factor_data:
@@ -111,10 +134,11 @@ async def run_single_backtest(request: SingleBacktestRequest):
                 df = list(all_factor_data.values())[0].copy()
                 result = backtest_service.single_factor_backtest(
                     df=df,
-                    factor_name=request.factor_name,
+                    factor_name=primary_factor_name,
                     percentile=request.percentile,
                     direction=request.direction,
                     n_quantiles=request.n_quantiles,
+                    shares_per_trade=request.shares_per_trade,
                 )
             else:
                 # 横截面回测
@@ -130,7 +154,7 @@ async def run_single_backtest(request: SingleBacktestRequest):
                 top_percentile = (100 - request.percentile) / 100.0
                 result = backtest_service.cross_sectional_backtest(
                     df=df,
-                    factor_name=request.factor_name,
+                    factor_name=primary_factor_name,
                     top_percentile=top_percentile,
                     direction=request.direction,
                 )
@@ -139,10 +163,11 @@ async def run_single_backtest(request: SingleBacktestRequest):
             df = list(all_factor_data.values())[0].copy()
             result = backtest_service.multi_factor_backtest(
                 df=df,
-                factor_names=[request.factor_name],
+                factor_names=factor_names_to_use,
                 method=request.weight_method,
                 percentile=request.percentile,
                 direction=request.direction,
+                shares_per_trade=request.shares_per_trade,
             )
 
         # 提取指标
@@ -163,11 +188,156 @@ async def run_single_backtest(request: SingleBacktestRequest):
             else:
                 result_serializable[k] = v
 
+        # 清理结果中的NaN和inf值，确保JSON可序列化
+        def clean_value(v):
+            if isinstance(v, float):
+                if np.isnan(v) or np.isinf(v):
+                    return 0.0
+            return v
+
+        def clean_dict(d):
+            if isinstance(d, dict):
+                return {k: clean_dict(v) for k, v in d.items()}
+            elif isinstance(d, list):
+                return [clean_value(v) for v in d]
+            else:
+                return clean_value(d)
+
+        # 添加详细的图表数据
+        chart_data = {}
+
+        # 为每只股票生成图表数据（单股票和多股票模式都支持）
+        for stock_code, df in all_factor_data.items():
+            # 确保索引是DatetimeIndex
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df = df.copy()
+                if "date" in df.columns:
+                    df = df.set_index("date")
+                df.index = pd.to_datetime(df.index)
+
+            # K线数据
+            stock_chart_data = {
+                "kline": {
+                    "dates": df.index.strftime('%Y-%m-%d').tolist(),
+                    "open": df["open"].tolist() if "open" in df.columns else df["close"].tolist(),
+                    "high": df["high"].tolist() if "high" in df.columns else df["close"].tolist(),
+                    "low": df["low"].tolist() if "low" in df.columns else df["close"].tolist(),
+                    "close": df["close"].tolist(),
+                },
+                "factor": {
+                    "dates": df.index.strftime('%Y-%m-%d').tolist(),
+                    "name": primary_factor_name if request.strategy_type == "single_factor" else f"{len(factor_names_to_use)}个因子组合",
+                    "values": df[primary_factor_name].tolist()
+                }
+            }
+
+            # 买卖信号 - 两种类型
+            factor_rank = df[primary_factor_name].rolling(252, min_periods=1).rank(pct=True)
+            percentile_threshold = request.percentile / 100.0
+
+            if request.direction == "long":
+                entries = factor_rank >= percentile_threshold
+                exits = factor_rank < percentile_threshold
+            else:
+                entries = factor_rank <= percentile_threshold
+                exits = factor_rank > percentile_threshold
+
+            # 1. 策略信号（所有满足条件的信号，不考虑持仓状态）
+            strategy_buy_dates = df.index[entries].strftime('%Y-%m-%d').tolist()
+            strategy_buy_prices = df.loc[entries, "close"].tolist()
+            strategy_sell_dates = df.index[exits].strftime('%Y-%m-%d').tolist()
+            strategy_sell_prices = df.loc[exits, "close"].tolist()
+
+            # 2. 实际交易信号（从VectorBT交易记录中提取）
+            actual_buy_dates = []
+            actual_buy_prices = []
+            actual_sell_dates = []
+            actual_sell_prices = []
+
+            if result_serializable.get("trades") and is_single_stock:
+                trades_df = result["trades"]
+                if trades_df is not None and len(trades_df) > 0:
+                    # trades_df的索引是入场时间（DatetimeIndex，name='入场时间'）
+                    # 直接遍历索引和行
+                    for entry_time, row in trades_df.iterrows():
+                        # entry_time 是买入日期（Timestamp）
+                        if pd.notna(entry_time):
+                            buy_date = pd.Timestamp(entry_time).strftime('%Y-%m-%d')
+                            if '入场价格' in row and pd.notna(row['入场价格']):
+                                actual_buy_dates.append(buy_date)
+                                actual_buy_prices.append(float(row['入场价格']))
+
+                        # 提取出场时间（卖出）
+                        if '出场时间' in row and pd.notna(row['出场时间']):
+                            exit_time = row['出场时间']
+                            #出场时间可能是字符串或Timestamp
+                            if isinstance(exit_time, str):
+                                sell_date = exit_time  # 已经是格式化的字符串
+                            else:
+                                sell_date = pd.Timestamp(exit_time).strftime('%Y-%m-%d')
+
+                            actual_sell_dates.append(sell_date)
+
+                            if '出场价格' in row and pd.notna(row['出场价格']):
+                                actual_sell_prices.append(float(row['出场价格']))
+
+            stock_chart_data["signals"] = {
+                "strategy": {
+                    "buy": {
+                        "dates": strategy_buy_dates,
+                        "prices": strategy_buy_prices
+                    },
+                    "sell": {
+                        "dates": strategy_sell_dates,
+                        "prices": strategy_sell_prices
+                    }
+                },
+                "actual": {
+                    "buy": {
+                        "dates": actual_buy_dates,
+                        "prices": actual_buy_prices
+                    },
+                    "sell": {
+                        "dates": actual_sell_dates,
+                        "prices": actual_sell_prices
+                    }
+                }
+            }
+
+            # 净值曲线 - 使用result中的equity_curve，或者基于信号生成模拟的
+            if "equity_curve" in result_serializable and is_single_stock:
+                # 单股票模式使用回测结果的净值曲线
+                equity_dates = result["equity_curve"].index.strftime('%Y-%m-%d').tolist()
+                stock_chart_data["equity"] = {
+                    "dates": equity_dates,
+                    "values": result_serializable["equity_curve"]
+                }
+            else:
+                # 多股票模式或没有equity_curve时，生成基于收盘价的基准曲线
+                stock_chart_data["equity"] = {
+                    "dates": df.index.strftime('%Y-%m-%d').tolist(),
+                    "values": (df["close"] / df["close"].iloc[0] * request.initial_capital).tolist()
+                }
+
+            # 保存当前股票的图表数据
+            chart_data[stock_code] = stock_chart_data
+
+        # 如果是单股票模式，保持向后兼容的格式，只返回该股票的数据
+        if is_single_stock and len(all_factor_data) > 0:
+            first_stock = list(all_factor_data.keys())[0]
+            chart_data = chart_data[first_stock]
+
+        # 清洗数据以确保JSON序列化有效
+        cleaned_metrics = clean_dict(metrics)
+        cleaned_result = clean_dict(result_serializable)
+        cleaned_chart_data = clean_dict(chart_data)
+
         return {
             "success": True,
             "data": {
-                "metrics": metrics,
-                "result": result_serializable
+                "metrics": cleaned_metrics,
+                "result": cleaned_result,
+                "chart_data": cleaned_chart_data
             }
         }
     except HTTPException:

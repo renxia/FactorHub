@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import BacktestCharts from '../components/BacktestCharts'
 import {
   Card,
   Form,
@@ -12,7 +14,6 @@ import {
   Tabs,
   Row,
   Col,
-  Table,
   Tag,
   message,
   Statistic,
@@ -20,17 +21,13 @@ import {
   Space,
   Modal,
   List,
-  Popconfirm,
-  Empty,
-  Tooltip
+  Popconfirm
 } from 'antd'
 import {
   LineChartOutlined,
-  BarChartOutlined,
   SaveOutlined,
   DeleteOutlined,
   PlayCircleOutlined,
-  PlusOutlined,
   FundOutlined,
   ReloadOutlined,
   FolderOpenOutlined
@@ -53,7 +50,7 @@ interface BacktestConfig {
   start_date: string
   end_date: string
   factor_name?: string
-  factor_names?: string[]
+  factor_names?: string[]  // 多因子选择
   strategy_type: 'single_factor' | 'multi_factor'
   initial_capital: number
   commission_rate: number
@@ -62,6 +59,7 @@ interface BacktestConfig {
   direction: 'long' | 'short'
   n_quantiles: number
   weight_method?: string
+  shares_per_trade: number
 }
 
 interface StrategyTemplate {
@@ -90,21 +88,11 @@ interface BacktestResult {
   }
 }
 
-interface ComparisonResult {
-  [strategyName: string]: {
-    metrics: {
-      total_return: number
-      annual_return: number
-      volatility: number
-      sharpe_ratio: number
-    }
-    returns: number[]
-  }
-}
-
 // ========== 组件 ==========
 
 const Backtesting: React.FC = () => {
+  const navigate = useNavigate()
+
   // ========== 状态管理 ==========
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
@@ -112,19 +100,11 @@ const Backtesting: React.FC = () => {
 
   // 单策略回测
   const [singleBacktestResult, setSingleBacktestResult] = useState<BacktestResult | null>(null)
+  const [chartData, setChartData] = useState<any>({})
   const equityChartRef = useRef<HTMLDivElement>(null)
   const equityChartInstance = useRef<echarts.ECharts | null>(null)
   const drawdownChartRef = useRef<HTMLDivElement>(null)
   const drawdownChartInstance = useRef<echarts.ECharts | null>(null)
-
-  // 策略对比
-  const [strategies, setStrategies] = useState<any[]>([
-    { id: 1, name: '策略1', factor: '', top_pct: 20, direction: 'long' },
-    { id: 2, name: '策略2', factor: '', top_pct: 30, direction: 'long' }
-  ])
-  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null)
-  const comparisonChartRef = useRef<HTMLDivElement>(null)
-  const comparisonChartInstance = useRef<echarts.ECharts | null>(null)
 
   // 策略管理
   const [savedStrategies, setSavedStrategies] = useState<StrategyTemplate[]>([])
@@ -149,9 +129,6 @@ const Backtesting: React.FC = () => {
       }
       if (drawdownChartInstance.current) {
         drawdownChartInstance.current.dispose()
-      }
-      if (comparisonChartInstance.current) {
-        comparisonChartInstance.current.dispose()
       }
     }
   }, [])
@@ -184,6 +161,21 @@ const Backtesting: React.FC = () => {
   const runSingleBacktest = async (values: any) => {
     const [startDate, endDate] = values.dateRange
 
+    // 处理因子选择：单因子或多因子
+    const isMultiFactor = values.strategy_type === 'multi_factor'
+    let factorName: string | undefined
+    let factorNames: string[] | undefined
+
+    if (isMultiFactor) {
+      // 多因子策略
+      factorNames = values.factor_names || []
+      factorName = factorNames[0]  // 使用第一个因子作为主因子（用于向后兼容）
+    } else {
+      // 单因子策略
+      factorName = values.factor_name
+      factorNames = [factorName]
+    }
+
     const config: BacktestConfig = {
       data_mode: values.data_mode,
       stock_codes: values.data_mode === 'single'
@@ -191,7 +183,8 @@ const Backtesting: React.FC = () => {
         : values.stock_codes.split('\n').filter((s: string) => s.trim()),
       start_date: startDate.format('YYYY-MM-DD'),
       end_date: endDate.format('YYYY-MM-DD'),
-      factor_name: values.factor_name,
+      factor_name: factorName,
+      factor_names: factorNames,
       strategy_type: values.strategy_type,
       initial_capital: values.initial_capital,
       commission_rate: values.commission_rate / 100,
@@ -199,19 +192,41 @@ const Backtesting: React.FC = () => {
       percentile: values.percentile,
       direction: values.direction,
       n_quantiles: 5,
-      weight_method: values.weight_method
+      weight_method: values.weight_method || 'equal_weight',
+      shares_per_trade: (values.shares_per_trade || 1) * 100  // 手数转股数（1手=100股）
     }
 
     try {
       setLoading(true)
+      // 清空旧的图表数据，确保新图表完全重新加载
+      setChartData({})
+      setSingleBacktestResult(null)
 
       const response = await axios.post('/api/backtest/single', config)
 
       if (response.data.success) {
         setSingleBacktestResult(response.data.data)
+
+        // 设置图表数据
+        if (response.data.data.chart_data) {
+          const chartDataForStocks: any = {}
+
+          // 检查是否是单股票模式返回的结构
+          if (response.data.data.chart_data.kline) {
+            // 单股票模式：直接使用返回的数据
+            const firstStockCode = config.stock_codes[0]
+            chartDataForStocks[firstStockCode] = response.data.data.chart_data
+          } else {
+            // 多股票模式：数据结构已经是 {stock_code: chart_data}
+            Object.assign(chartDataForStocks, response.data.data.chart_data)
+          }
+
+          setChartData(chartDataForStocks)
+        }
+
         message.success('回测完成')
 
-        // 延迟渲染图表
+        // 延迟渲染旧图表（保留向后兼容）
         setTimeout(() => {
           renderEquityChart(response.data.data.result.equity_curve || response.data.data.result.returns || [])
           renderDrawdownChart(response.data.data.result.equity_curve || response.data.data.result.returns || [])
@@ -362,136 +377,6 @@ const Backtesting: React.FC = () => {
     chart.setOption(option)
   }
 
-  // ========== 策略对比 ==========
-  const addStrategy = () => {
-    const newId = Math.max(...strategies.map(s => s.id), 0) + 1
-    setStrategies([
-      ...strategies,
-      { id: newId, name: `策略${newId}`, factor: '', top_pct: 20, direction: 'long' }
-    ])
-  }
-
-  const removeStrategy = (id: number) => {
-    if (strategies.length <= 2) {
-      message.warning('至少保留2个策略')
-      return
-    }
-    setStrategies(strategies.filter(s => s.id !== id))
-  }
-
-  const updateStrategy = (id: number, field: string, value: any) => {
-    setStrategies(strategies.map(s =>
-      s.id === id ? { ...s, [field]: value } : s
-    ))
-  }
-
-  const runComparison = async (values: any) => {
-    const [startDate, endDate] = values.dateRange
-
-    const requestData = {
-      data_mode: values.data_mode,
-      stock_codes: values.stock_codes.split('\n').filter((s: string) => s.trim()),
-      strategies: strategies.map(s => ({
-        name: s.name,
-        factor: s.factor,
-        top_pct: s.top_pct,
-        direction: s.direction
-      })),
-      start_date: startDate.format('YYYY-MM-DD'),
-      end_date: endDate.format('YYYY-MM-DD'),
-      initial_capital: 1000000,
-      commission_rate: 0.0003,
-      rebalance_freq: 'monthly'
-    }
-
-    // 验证策略配置
-    const validStrategies = requestData.strategies.filter((s: any) => s.factor)
-    if (validStrategies.length < 2) {
-      message.warning('请至少为2个策略选择因子')
-      return
-    }
-
-    try {
-      setLoading(true)
-
-      const response = await axios.post('/api/backtest/comparison', requestData)
-
-      if (response.data.success && response.data.data.results) {
-        setComparisonResult(response.data.data.results)
-        message.success('策略对比完成')
-
-        // 渲染对比图表
-        setTimeout(() => {
-          renderComparisonChart(response.data.data.results)
-        }, 300)
-      } else {
-        message.error('对比失败')
-      }
-    } catch (error: any) {
-      console.error('对比失败:', error)
-      message.error('对比失败: ' + (error.message || '未知错误'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const renderComparisonChart = (data: ComparisonResult) => {
-    if (!comparisonChartRef.current) return
-
-    let chart = comparisonChartInstance.current
-    if (!chart) {
-      chart = echarts.init(comparisonChartRef.current)
-      comparisonChartInstance.current = chart
-    }
-
-    chart.clear()
-
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
-
-    const datasets = Object.entries(data).map(([name, metrics], i) => ({
-      name: name,
-      data: metrics.returns || [],
-      type: 'line' as const,
-      smooth: true,
-      showSymbol: false,
-      itemStyle: { color: colors[i % colors.length] }
-    }))
-
-    const maxLength = Math.max(...datasets.map(d => d.data.length))
-
-    const option = {
-      title: {
-        text: '策略收益对比',
-        left: 'center',
-        textStyle: { fontSize: 16, fontWeight: 600 }
-      },
-      tooltip: {
-        trigger: 'axis'
-      },
-      legend: {
-        data: Object.keys(data),
-        top: 30
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: Array.from({ length: maxLength }, (_, i) => i)
-      },
-      yAxis: {
-        type: 'value',
-        scale: true
-      },
-      series: datasets
-    }
-
-    chart.setOption(option)
-  }
-
   // ========== 策略管理 ==========
   const saveStrategy = async () => {
     try {
@@ -600,6 +485,9 @@ const Backtesting: React.FC = () => {
               <p className="page-subtitle">基于因子的量化策略回测与性能分析</p>
             </div>
           </div>
+          <Button onClick={() => navigate('/factor-management')}>
+            返回因子管理
+          </Button>
         </div>
 
         {/* 主卡片 */}
@@ -634,7 +522,8 @@ const Backtesting: React.FC = () => {
                             commission_rate: 0.03,
                             slippage: 0,
                             percentile: 50,
-                            direction: 'long'
+                            direction: 'long',
+                            shares_per_trade: 1
                           }}
                         >
                           {/* 数据配置 */}
@@ -643,7 +532,7 @@ const Backtesting: React.FC = () => {
                           </Divider>
 
                           <Form.Item label="数据模式" name="data_mode">
-                            <Select>
+                            <Select size="large">
                               <Option value="single">单股票</Option>
                               <Option value="pool">股票池</Option>
                             </Select>
@@ -681,34 +570,118 @@ const Backtesting: React.FC = () => {
                             因子配置
                           </Divider>
 
-                          <Form.Item label="选择因子" name="factor_name" rules={[{ required: true }]}>
-                            <Select
-                              showSearch
-                              placeholder="选择因子"
-                              optionFilterProp="label"
-                            >
-                              {factors.map((factor) => (
-                                <Option
-                                  key={factor.id}
-                                  value={factor.name}
-                                  label={factor.name}
-                                >
-                                  <div>
-                                    <div>{factor.name}</div>
-                                    <div style={{ fontSize: '12px', color: '#64748b' }}>
-                                      {factor.category}
-                                    </div>
-                                  </div>
-                                </Option>
-                              ))}
-                            </Select>
-                          </Form.Item>
-
                           <Form.Item label="策略类型" name="strategy_type">
-                            <Select>
+                            <Select size="large">
                               <Option value="single_factor">单因子策略</Option>
                               <Option value="multi_factor">多因子策略</Option>
                             </Select>
+                          </Form.Item>
+
+                          <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => {
+                            return prevValues?.strategy_type !== currentValues?.strategy_type
+                          }}>
+                            {({ getFieldValue }) => {
+                              const isMultiFactor = getFieldValue('strategy_type') === 'multi_factor'
+
+                              return (
+                                <>
+                                  <Form.Item
+                                    label={isMultiFactor ? "选择因子（可多选）" : "选择因子"}
+                                    name={isMultiFactor ? "factor_names" : "factor_name"}
+                                    rules={[{ required: true, message: '请选择因子' }]}
+                                  >
+                                    <Select
+                                      showSearch
+                                      placeholder={isMultiFactor ? "输入因子名称搜索" : "输入因子名称搜索"}
+                                      optionFilterProp="label"
+                                      mode={isMultiFactor ? "multiple" : undefined}
+                                      maxTagCount="responsive"
+                                      size="large"
+                                      filterOption={(input, option) => {
+                                        const label = String(option?.label ?? '')
+                                        const value = String(option?.value ?? '')
+                                        return (
+                                          label.toLowerCase().includes(input.toLowerCase()) ||
+                                          value.toLowerCase().includes(input.toLowerCase())
+                                        )
+                                      }}
+                                      optionLabelProp="label"
+                                    >
+                                      {factors.map((factor) => (
+                                        <Option
+                                          key={factor.id}
+                                          value={factor.name}
+                                          label={factor.name}
+                                        >
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                              <span style={{ fontWeight: 500 }}>{factor.name}</span>
+                                              <Tag color={factor.source === 'preset' ? 'success' : 'warning'}>
+                                                {factor.source === 'preset' ? '预置' : '自定义'}
+                                              </Tag>
+                                              <Tag color="blue">{factor.category}</Tag>
+                                            </div>
+                                            <div style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>
+                                              {factor.code}
+                                            </div>
+                                            {factor.description && (
+                                              <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                                                {factor.description}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </Option>
+                                      ))}
+                                    </Select>
+                                  </Form.Item>
+
+                                  {/* 因子选择提示和操作按钮 */}
+                                  {isMultiFactor && (
+                                    <Form.Item noStyle shouldUpdate>
+                                      {() => {
+                                        const selectedCount = form.getFieldValue('factor_names')?.length || 0
+                                        return (
+                                          <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            marginBottom: 16
+                                          }}>
+                                            <span className="text-hint">
+                                              已选择 <strong style={{ color: '#3b82f6' }}>{selectedCount}</strong> 个因子
+                                            </span>
+                                            <Space size="small">
+                                              <Button
+                                                type="link"
+                                                size="small"
+                                                                onClick={() => {
+                                                                  form.setFieldsValue({
+                                                                    factor_names: factors.map((f) => f.name)
+                                                                  })
+                                                                }}
+                                                              >
+                                                全选
+                                              </Button>
+                                              <Button
+                                                type="link"
+                                                size="small"
+                                                                onClick={() => {
+                                                                  form.setFieldsValue({
+                                                                    factor_names: []
+                                                                  })
+                                                                }}
+                                                              >
+                                                清空
+                                              </Button>
+                                            </Space>
+                                          </div>
+                                        )
+                                      }}
+                                    </Form.Item>
+                                  )}
+                                </>
+                              )
+                            }}
                           </Form.Item>
 
                           <Divider style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
@@ -726,14 +699,25 @@ const Backtesting: React.FC = () => {
                           </Form.Item>
 
                           <Row gutter={16}>
-                            <Col span={12}>
+                            <Col span={8}>
                               <Form.Item label="费率(%)" name="commission_rate">
                                 <InputNumber min={0} max={1} step={0.01} style={{ width: '100%' }} />
                               </Form.Item>
                             </Col>
-                            <Col span={12}>
+                            <Col span={8}>
                               <Form.Item label="滑点(%)" name="slippage">
                                 <InputNumber min={0} max={1} step={0.01} style={{ width: '100%' }} />
+                              </Form.Item>
+                            </Col>
+                            <Col span={8}>
+                              <Form.Item label="每次手数" name="shares_per_trade">
+                                <InputNumber
+                                  min={1}
+                                  max={100}
+                                  step={1}
+                                  style={{ width: '100%' }}
+                                  addonAfter="手"
+                                />
                               </Form.Item>
                             </Col>
                           </Row>
@@ -837,255 +821,38 @@ const Backtesting: React.FC = () => {
                               </Row>
                             </div>
 
-                            {/* 图表 */}
-                            <div className="chart-section">
-                              <h4 className="chart-title">
-                                <LineChartOutlined style={{ marginRight: 8 }} />
-                                净值曲线
-                              </h4>
-                              <div ref={equityChartRef} className="chart-container" style={{ height: '350px' }}></div>
-                            </div>
+                            {/* 新的多图表联动系统 */}
+                            {chartData && Object.keys(chartData).length > 0 ? (
+                              <div>
+                                <Divider />
+                                <div className="chart-section" style={{ paddingBottom: '24px' }}>
+                                  <h4 className="chart-title">
+                                    <LineChartOutlined style={{ marginRight: 8 }} />
+                                    综合分析图表
+                                  </h4>
+                                  <BacktestCharts data={chartData} loading={loading} />
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                {/* 旧图表（向后兼容） */}
+                                <div className="chart-section">
+                                  <h4 className="chart-title">
+                                    <LineChartOutlined style={{ marginRight: 8 }} />
+                                    净值曲线
+                                  </h4>
+                                  <div ref={equityChartRef} className="chart-container" style={{ height: '350px' }}></div>
+                                </div>
 
-                            <div className="chart-section">
-                              <h4 className="chart-title">
-                                <LineChartOutlined style={{ marginRight: 8 }} />
-                                回撤曲线
-                              </h4>
-                              <div ref={drawdownChartRef} className="chart-container" style={{ height: '300px' }}></div>
-                            </div>
-                          </div>
-                        )}
-                      </Card>
-                    </Col>
-                  </Row>
-                </div>
-              )
-            },
-            {
-              key: 'comparison',
-              label: (
-                <span>
-                  <BarChartOutlined />
-                  策略对比
-                </span>
-              ),
-              children: (
-                <div>
-                  <Row gutter={[24, 24]}>
-                    {/* 左侧配置面板 */}
-                    <Col xs={24} lg={8}>
-                      <Card title="策略对比配置" className="config-card">
-                        <Form
-                          layout="vertical"
-                          onFinish={runComparison}
-                          initialValues={{
-                            data_mode: 'pool',
-                            stock_codes: '000001\n600000',
-                            initial_capital: 1000000,
-                            commission_rate: 0.03
-                          }}
-                        >
-                          {/* 数据配置 */}
-                          <Divider style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                            数据配置
-                          </Divider>
-
-                          <Form.Item label="股票代码列表" name="stock_codes" rules={[{ required: true }]}>
-                            <TextArea
-                              rows={3}
-                              placeholder="每行一个股票代码&#10;000001&#10;600000"
-                            />
-                          </Form.Item>
-
-                          <Form.Item label="日期范围" name="dateRange" rules={[{ required: true }]}>
-                            <RangePicker style={{ width: '100%' }} />
-                          </Form.Item>
-
-                          {/* 策略列表 */}
-                          <Divider style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                            策略列表（至少2个）
-                          </Divider>
-
-                          <div style={{ marginBottom: '16px' }}>
-                            <Button
-                              type="dashed"
-                              onClick={addStrategy}
-                              icon={<PlusOutlined />}
-                              block
-                            >
-                              添加策略
-                            </Button>
-                          </div>
-
-                          {strategies.map((strategy) => (
-                            <Card
-                              key={strategy.id}
-                              size="small"
-                              style={{ marginBottom: '12px' }}
-                              extra={
-                                strategies.length > 2 && (
-                                  <Button
-                                    type="text"
-                                    danger
-                                    size="small"
-                                    icon={<DeleteOutlined />}
-                                    onClick={() => removeStrategy(strategy.id)}
-                                  />
-                                )
-                              }
-                            >
-                              <Form.Item
-                                label="策略名称"
-                                style={{ marginBottom: '8px' }}
-                              >
-                                <Input
-                                  value={strategy.name}
-                                  onChange={(e) => updateStrategy(strategy.id, 'name', e.target.value)}
-                                  placeholder="策略名称"
-                                />
-                              </Form.Item>
-
-                              <Form.Item
-                                label="选择因子"
-                                style={{ marginBottom: '8px' }}
-                                required
-                              >
-                                <Select
-                                  value={strategy.factor}
-                                  onChange={(value) => updateStrategy(strategy.id, 'factor', value)}
-                                  placeholder="选择因子"
-                                  showSearch
-                                  optionFilterProp="label"
-                                >
-                                  {factors.map((factor) => (
-                                    <Option
-                                      key={factor.id}
-                                      value={factor.name}
-                                      label={factor.name}
-                                    >
-                                      {factor.name}
-                                    </Option>
-                                  ))}
-                                </Select>
-                              </Form.Item>
-
-                              <Row gutter={8}>
-                                <Col span={12}>
-                                  <Form.Item label="前%" style={{ marginBottom: '8px' }}>
-                                    <InputNumber
-                                      value={strategy.top_pct}
-                                      onChange={(value) => updateStrategy(strategy.id, 'top_pct', value)}
-                                      min={5}
-                                      max={50}
-                                      style={{ width: '100%' }}
-                                    />
-                                  </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                  <Form.Item label="方向" style={{ marginBottom: '8px' }}>
-                                    <Select
-                                      value={strategy.direction}
-                                      onChange={(value) => updateStrategy(strategy.id, 'direction', value)}
-                                    >
-                                      <Option value="long">做多</Option>
-                                      <Option value="short">做空</Option>
-                                    </Select>
-                                  </Form.Item>
-                                </Col>
-                              </Row>
-                            </Card>
-                          ))}
-
-                          <Form.Item>
-                            <Button
-                              type="primary"
-                              htmlType="submit"
-                              icon={<PlayCircleOutlined />}
-                              loading={loading}
-                              block
-                              size="large"
-                            >
-                              运行策略对比
-                            </Button>
-                          </Form.Item>
-                        </Form>
-                      </Card>
-                    </Col>
-
-                    {/* 右侧结果展示 */}
-                    <Col xs={24} lg={16}>
-                      <Card title="对比结果" className="result-card">
-                        {!comparisonResult && (
-                          <div className="placeholder-content">
-                            <BarChartOutlined className="placeholder-icon" />
-                            <p className="placeholder-text">配置策略后点击"运行策略对比"按钮</p>
-                            <p className="placeholder-hint">同时对比多个策略的表现</p>
-                          </div>
-                        )}
-
-                        {comparisonResult && (
-                          <div>
-                            {/* 指标对比表 */}
-                            <Table
-                              columns={[
-                                {
-                                  title: '策略名称',
-                                  dataIndex: 'name',
-                                  key: 'name',
-                                  render: (text: string) => <span style={{ fontWeight: 500 }}>{text}</span>
-                                },
-                                {
-                                  title: '累计收益率',
-                                  dataIndex: 'total_return',
-                                  key: 'total_return',
-                                  render: (value: number) => (
-                                    <Tag color={value > 0 ? 'red' : 'green'}>
-                                      {(value * 100).toFixed(2)}%
-                                    </Tag>
-                                  ),
-                                  sorter: (a: any, b: any) => a.total_return - b.total_return
-                                },
-                                {
-                                  title: '年化收益率',
-                                  dataIndex: 'annual_return',
-                                  key: 'annual_return',
-                                  render: (value: number) => (
-                                    <Tag color={value > 0 ? 'red' : 'green'}>
-                                      {(value * 100).toFixed(2)}%
-                                    </Tag>
-                                  )
-                                },
-                                {
-                                  title: '年化波动率',
-                                  dataIndex: 'volatility',
-                                  key: 'volatility',
-                                  render: (value: number) => `${(value * 100).toFixed(2)}%`
-                                },
-                                {
-                                  title: '夏普比率',
-                                  dataIndex: 'sharpe_ratio',
-                                  key: 'sharpe_ratio',
-                                  render: (value: number) => value.toFixed(4)
-                                }
-                              ]}
-                              dataSource={Object.entries(comparisonResult).map(([name, metrics]) => ({
-                                key: name,
-                                name: name,
-                                ...metrics.metrics
-                              }))}
-                              pagination={false}
-                              size="small"
-                              style={{ marginBottom: '24px' }}
-                            />
-
-                            {/* 对比图表 */}
-                            <div className="chart-section">
-                              <h4 className="chart-title">
-                                <BarChartOutlined style={{ marginRight: 8 }} />
-                                收益对比
-                              </h4>
-                              <div ref={comparisonChartRef} className="chart-container"></div>
-                            </div>
+                                <div className="chart-section">
+                                  <h4 className="chart-title">
+                                    <LineChartOutlined style={{ marginRight: 8 }} />
+                                    回撤曲线
+                                  </h4>
+                                  <div ref={drawdownChartRef} className="chart-container" style={{ height: '300px' }}></div>
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                       </Card>

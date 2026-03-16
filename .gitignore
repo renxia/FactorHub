@@ -39,6 +39,7 @@ data/*.sqlite
 data/*.sqlite3
 data/cache/
 logs/*.log
+backend.log
 
 # Environment variables
 .env
@@ -62,8 +63,7 @@ memory/
 docs/
 nul
 skills
-data/db/factorflow.db
-data/db/factorflow.db
+
 logs/
 vite-app/
 vite-naive-ui/
